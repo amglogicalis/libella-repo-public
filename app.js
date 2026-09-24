@@ -19,14 +19,19 @@ const tabPanes = document.querySelectorAll('.tab-pane');
 document.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
   setupModals();
+  setupAuth();
   setupSimulator();
   setupMountLensDynamicFields();
-  await loadWatchtowers();
-  await refreshAll();
 
-  // Polling every 10s if tab is visible
+  const isAuthenticated = await checkAuthStatus();
+  if (isAuthenticated) {
+    await loadWatchtowers();
+    await refreshAll();
+  }
+
+  // Polling every 10s if tab is visible and authenticated
   setInterval(() => {
-    if (!document.hidden) {
+    if (!document.hidden && localStorage.getItem('libella_vault_pat')) {
       refreshAll(false);
     }
   }, 10000);
@@ -92,12 +97,13 @@ async function loadWatchtowers() {
     console.warn('Using offline / static fallback for watchtowers', err);
     // Provide a default offline mirror entry if none loaded
     if (activeLibellas.length === 0) {
+      const u = localStorage.getItem('libella_vault_user') || 'user';
       activeLibellas = [
         {
           id: 'default',
-          name: 'Default Watchtower',
+          name: `Default Watchtower (@${u})`,
           slug: 'default',
-          ingestKey: 'lbk_live_demo',
+          ingestKey: `lbk_${u}_live`,
           budgetUsdMonthly: 50,
           statusPageEnabled: true,
           statusPageAccess: 'public',
@@ -1111,24 +1117,171 @@ function setupModals() {
     } catch {}
   });
 
-  // Vault Settings Modal
-  const mVault = document.getElementById('modalVaultConfig');
-  document.getElementById('btnVaultConfig')?.addEventListener('click', () => {
-    document.getElementById('vaultPat').value = localStorage.getItem('libella_vault_pat') || '';
-    document.getElementById('vaultRepo').value = localStorage.getItem('libella_vault_repo') || '';
-    mVault.style.display = 'flex';
+}
+
+// -------------------------------------------------------------
+// Authentication & User Profile Management (Standard Terra PAT)
+// -------------------------------------------------------------
+function setupAuth() {
+  const btnAuthLogin = document.getElementById('btnAuthLogin');
+  const authPatInput = document.getElementById('authPatInput');
+  const btnLogout = document.getElementById('btnLogout');
+
+  btnAuthLogin?.addEventListener('click', () => handleAuthLogin());
+  authPatInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleAuthLogin();
   });
-  document.getElementById('btnCancelVault')?.addEventListener('click', () => {
-    mVault.style.display = 'none';
-  });
-  document.getElementById('btnSaveVault')?.addEventListener('click', () => {
-    const pat = document.getElementById('vaultPat').value.trim();
-    const repo = document.getElementById('vaultRepo').value.trim();
-    if (pat) localStorage.setItem('libella_vault_pat', pat);
-    if (repo) localStorage.setItem('libella_vault_repo', repo);
-    mVault.style.display = 'none';
-    alert('Configuración de GitHub Storage Vault guardada.');
-  });
+
+  btnLogout?.addEventListener('click', () => handleAuthLogout());
+}
+
+async function checkAuthStatus() {
+  const token = localStorage.getItem('libella_vault_pat');
+  const mAuth = document.getElementById('modalAuthLogin');
+  const userProfile = document.getElementById('userProfile');
+
+  if (!token) {
+    if (mAuth) mAuth.style.display = 'flex';
+    if (userProfile) userProfile.style.display = 'none';
+    return false;
+  }
+
+  // If cached user info exists, render immediately to avoid UI flash
+  const cachedUser = localStorage.getItem('libella_vault_user');
+  const cachedAvatar = localStorage.getItem('libella_vault_avatar');
+  if (cachedUser) {
+    renderUserProfile(cachedUser, cachedAvatar);
+    if (mAuth) mAuth.style.display = 'none';
+  }
+
+  // Validate token with GitHub API
+  try {
+    const res = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Token inválido (HTTP ${res.status})`);
+    }
+
+    const userData = await res.json();
+    localStorage.setItem('libella_vault_user', userData.login);
+    localStorage.setItem('libella_vault_avatar', userData.avatar_url || '');
+    localStorage.setItem('libella_vault_repo', `${userData.login}/.libella-storage`);
+
+    renderUserProfile(userData.login, userData.avatar_url);
+    if (mAuth) mAuth.style.display = 'none';
+    return true;
+  } catch (err) {
+    console.warn('GitHub PAT validation error:', err);
+    // If unauthorized or bad token, force login popup
+    localStorage.removeItem('libella_vault_pat');
+    localStorage.removeItem('libella_vault_user');
+    localStorage.removeItem('libella_vault_avatar');
+    localStorage.removeItem('libella_vault_repo');
+    if (userProfile) userProfile.style.display = 'none';
+    showAuthError('Tu sesión ha expirado o el token no es válido. Introduce tu PAT de nuevo.');
+    if (mAuth) mAuth.style.display = 'flex';
+    return false;
+  }
+}
+
+async function handleAuthLogin() {
+  const tokenInput = document.getElementById('authPatInput');
+  const btnAuthLogin = document.getElementById('btnAuthLogin');
+  const mAuth = document.getElementById('modalAuthLogin');
+  const token = tokenInput ? tokenInput.value.trim() : '';
+
+  if (!token) {
+    showAuthError('Por favor, introduce tu Personal Access Token (PAT) de GitHub.');
+    return;
+  }
+
+  if (btnAuthLogin) {
+    btnAuthLogin.disabled = true;
+    btnAuthLogin.innerText = 'Validando con GitHub...';
+  }
+  hideAuthError();
+
+  try {
+    const res = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Token inválido o sin permisos (HTTP ${res.status}). Comprueba que tenga permisos 'repo'.`);
+    }
+
+    const userData = await res.json();
+    localStorage.setItem('libella_vault_pat', token);
+    localStorage.setItem('libella_vault_user', userData.login);
+    localStorage.setItem('libella_vault_avatar', userData.avatar_url || '');
+    localStorage.setItem('libella_vault_repo', `${userData.login}/.libella-storage`);
+
+    renderUserProfile(userData.login, userData.avatar_url);
+
+    if (mAuth) mAuth.style.display = 'none';
+    if (tokenInput) tokenInput.value = '';
+
+    // Load watchtowers and refresh dashboard
+    await loadWatchtowers();
+    await refreshAll();
+  } catch (err) {
+    showAuthError(err.message || 'Error autenticando con GitHub. Comprueba tu token o conexión.');
+  } finally {
+    if (btnAuthLogin) {
+      btnAuthLogin.disabled = false;
+      btnAuthLogin.innerText = '🔑 Iniciar Sesión en Libella';
+    }
+  }
+}
+
+function handleAuthLogout() {
+  localStorage.removeItem('libella_vault_pat');
+  localStorage.removeItem('libella_vault_user');
+  localStorage.removeItem('libella_vault_avatar');
+  localStorage.removeItem('libella_vault_repo');
+
+  const userProfile = document.getElementById('userProfile');
+  const mAuth = document.getElementById('modalAuthLogin');
+  const tokenInput = document.getElementById('authPatInput');
+
+  if (userProfile) userProfile.style.display = 'none';
+  if (tokenInput) tokenInput.value = '';
+  hideAuthError();
+  if (mAuth) mAuth.style.display = 'flex';
+}
+
+function renderUserProfile(username, avatarUrl) {
+  const userProfile = document.getElementById('userProfile');
+  const userDisplayName = document.getElementById('userDisplayName');
+  const userAvatar = document.getElementById('userAvatar');
+
+  if (userDisplayName) userDisplayName.innerText = `@${username}`;
+  if (userAvatar) userAvatar.src = avatarUrl || 'assets/logo_libella.png';
+  if (userProfile) userProfile.style.display = 'flex';
+}
+
+function showAuthError(msg) {
+  const errBox = document.getElementById('authErrorMsg');
+  if (errBox) {
+    errBox.innerText = msg;
+    errBox.style.display = 'block';
+  }
+}
+
+function hideAuthError() {
+  const errBox = document.getElementById('authErrorMsg');
+  if (errBox) {
+    errBox.innerText = '';
+    errBox.style.display = 'none';
+  }
 }
 
 function escapeHtml(str) {

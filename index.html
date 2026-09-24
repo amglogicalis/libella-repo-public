@@ -40,10 +40,6 @@
         <option value="30d">Últimos 30d</option>
       </select>
 
-      <button id="btnVaultConfig" class="btn btn-ghost btn-sm" title="Configuración de GitHub Storage Vault">
-        🔑 Vault
-      </button>
-
       <a href="status.html" target="_blank" class="btn btn-ghost btn-sm" title="Abrir Status Page Pública">
         🌐 Status Page
       </a>
@@ -51,6 +47,19 @@
       <button id="btnRefresh" class="btn btn-primary btn-sm">
         🔄 Actualizar
       </button>
+
+      <!-- AUTHENTICATED USER PROFILE BADGE -->
+      <div id="userProfile" class="user-profile-header" style="display:none;">
+        <img id="userAvatar" class="user-avatar" src="assets/logo_libella.png" alt="Avatar">
+        <div class="user-profile-info">
+          <span id="userDisplayName" class="user-name">@user</span>
+          <span class="user-storage-tag">.libella-storage</span>
+        </div>
+        <button id="btnLogout" class="btn-logout" title="Cerrar sesión de GitHub">
+          <span>🚪</span>
+          <span>Salir</span>
+        </button>
+      </div>
     </div>
   </header>
 
@@ -753,20 +762,38 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
     </div>
   </div>
 
-  <!-- MODAL: GITHUB VAULT STORAGE BRIDGE -->
-  <div id="modalVaultConfig" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:999; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:460px;">
-      <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">🔑 Conexión Directa a GitHub Storage Vault</h3>
-      <p style="color:var(--text-gray); font-size:0.84rem; margin-bottom:1rem;">
-        Permite a la consola operar directamente contra el repositorio <code>.libella-storage</code> en modo estático (GitHub Pages / Standalone), sin requerir servidores intermedios de pago.
+  <!-- MODAL: AUTENTICACIÓN GITHUB PAT (POPUP LOGIN) -->
+  <div id="modalAuthLogin" class="auth-overlay" style="display:none;">
+    <div class="auth-card">
+      <div class="auth-logo-box">
+        <img src="assets/logo_libella.png" alt="Libella Logo" class="auth-logo">
+      </div>
+      <h2>LIBELLA <span class="tag">Panopticon</span></h2>
+      <p class="auth-desc">
+        Universal Telemetry, Edge Time-Series & Multi-Cloud FinOps ($0 Infrastructure)
       </p>
-      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">GITHUB PERSONAL ACCESS TOKEN (PAT)</label>
-      <input type="password" id="vaultPat" class="search-input" placeholder="ghp_xxxxxxxxxxxx" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem; font-family:var(--font-mono);">
-      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">REPOSITORIO DE ALMACENAMIENTO</label>
-      <input type="text" id="vaultRepo" class="search-input" placeholder="usuario/.libella-storage" style="width:100%; margin-top:0.3rem; margin-bottom:1.4rem; font-family:var(--font-mono);">
-      <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
-        <button id="btnCancelVault" class="btn btn-ghost btn-sm">Cerrar</button>
-        <button id="btnSaveVault" class="btn btn-primary btn-sm">Guardar Conexión</button>
+
+      <div class="auth-info-box">
+        Introduce tu <strong>GitHub Personal Access Token (PAT)</strong> con permisos <code>repo</code> para sincronizar con tu bóveda <code>.libella-storage</code> y desbloquear la consola.
+      </div>
+
+      <div class="auth-form">
+        <label for="authPatInput">GITHUB PERSONAL ACCESS TOKEN (PAT):</label>
+        <div class="auth-input-wrapper">
+          <input type="password" id="authPatInput" class="search-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false" style="font-family:var(--font-mono); width:100%;">
+        </div>
+        <div class="auth-hint">
+          🔒 El token se almacena únicamente en tu navegador. Repositorio fijado automáticamente en <code>&lt;usuario&gt;/.libella-storage</code>.
+        </div>
+        <div id="authErrorMsg" class="auth-error" style="display:none;"></div>
+        <button id="btnAuthLogin" class="btn btn-primary auth-submit-btn" style="width:100%; padding:0.85rem; margin-top:1.1rem; font-weight:700; font-size:0.92rem;">
+          🔑 Iniciar Sesión en Libella
+        </button>
+      </div>
+
+      <div class="auth-footer">
+        <span class="pulse-indicator"></span>
+        <span>Terra Ecosystem • $0 Cost Cloud • Zero Data Leak</span>
       </div>
     </div>
   </div>
