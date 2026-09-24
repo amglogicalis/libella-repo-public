@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Status | Powered by Libella</title>
+  <link rel="icon" type="image/png" href="assets/logo_libella.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .status-container {
+      max-width: 860px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+    }
+    .incident-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--primary-border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="topbar" style="justify-content:center;">
+    <div class="brand">
+      <img src="assets/logo_libella.png" alt="Libella Logo" class="logo">
+      <div class="brand-text">
+        <h1 id="statusTitle">PANOPTICON SYSTEM STATUS</h1>
+        <p>Monitorizado en tiempo real por Libella ($0 Infrastructure)</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="status-container">
+    <div class="status-hero" id="statusHero">
+      <div class="status-badge-giant" id="statusBadge" style="background:rgba(20,219,96,0.2); color:var(--primary); border:1px solid var(--primary-border);">
+        <span style="font-size:1.5rem;">✔</span> TODOS LOS SISTEMAS OPERATIVOS
+      </div>
+      <p style="color:var(--text-muted); font-size:0.9rem;" id="statusSubtitle">
+        Rendimiento global óptimo. Sin incidentes activos reportados.
+      </p>
+
+      <div class="uptime-bar" id="uptimeBar"></div>
+      <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-gray); margin-top:0.6rem;">
+        <span>Hace 30 días</span>
+        <span id="uptimePercentText" style="color:var(--primary); font-weight:700;">100.0% Uptime</span>
+        <span>Hoy</span>
+      </div>
+    </div>
+
+    <!-- METRICS SNAPSHOT -->
+    <div class="grid-cards" style="grid-template-columns:repeat(3, 1fr); margin-bottom:2rem;">
+      <div class="card" style="text-align:center;">
+        <div class="card-label" style="justify-content:center;">Latencia Media</div>
+        <div class="card-value" id="snapAvgLatency" style="font-size:1.5rem;">0 ms</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="card-label" style="justify-content:center;">Latencia p95</div>
+        <div class="card-value" id="snapP95Latency" style="font-size:1.5rem; color:var(--primary);">0 ms</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="card-label" style="justify-content:center;">Tasa de Éxito</div>
+        <div class="card-value" id="snapSuccessRate" style="font-size:1.5rem; color:#38ef7d;">100%</div>
+      </div>
+    </div>
+
+    <!-- INCIDENTS -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span>📋</span> Registro Histórico de Incidentes</div>
+        <span class="badge badge-success" id="incidentsCount">0 incidentes</span>
+      </div>
+      <div id="incidentsList">
+        <div style="color:var(--text-gray); text-align:center; padding:1.5rem;">
+          No se han registrado incidentes en los últimos 30 días.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Página de Estado Pública • Generada automáticamente por <a href="index.html">Libella</a> • Filosofía Terra
+  </footer>
+
+  <script>
+    async function loadStatus() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const libellaId = urlParams.get('id') || 'default';
+
+      try {
+        const res = await fetch(`/api/libellas/${libellaId}/pulse`);
+        if (res.ok) {
+          const data = await res.json();
+          renderStatus(data);
+          return;
+        }
+      } catch {}
+
+      // Fallback display
+      renderFallback(libellaId);
+    }
+
+    function renderStatus(data) {
+      document.getElementById('statusTitle').innerText = (data.name || data.libellaId).toUpperCase() + ' — SYSTEM STATUS';
+      const badge = document.getElementById('statusBadge');
+      const sub = document.getElementById('statusSubtitle');
+      
+      if (data.overallStatus === 'operational') {
+        badge.innerHTML = '<span>✔</span> TODOS LOS SISTEMAS OPERATIVOS';
+        badge.style.background = 'rgba(20,219,96,0.2)';
+        badge.style.color = 'var(--primary)';
+        sub.innerText = 'Rendimiento global óptimo. Sin anomalías activas.';
+      } else if (data.overallStatus === 'degraded') {
+        badge.innerHTML = '<span>⚠️</span> RENDIMIENTO DEGRADADO';
+        badge.style.background = 'rgba(245,158,11,0.2)';
+        badge.style.color = 'var(--warning)';
+        sub.innerText = 'Se ha detectado latencia elevada o intermitencias parciales.';
+      } else {
+        badge.innerHTML = '<span>🚨</span> INTERRUPCIÓN DE SERVICIO';
+        badge.style.background = 'rgba(239,68,68,0.2)';
+        badge.style.color = 'var(--danger)';
+        sub.innerText = 'Se están experimentando problemas críticos de conectividad.';
+      }
+
+      document.getElementById('uptimePercentText').innerText = data.uptimePercent30d + '% Uptime';
+      document.getElementById('snapAvgLatency').innerText = data.vitalsSnapshot.avgLatencyMs + ' ms';
+      document.getElementById('snapP95Latency').innerText = data.vitalsSnapshot.p95LatencyMs + ' ms';
+      const successRate = Math.max(0, 100 - data.vitalsSnapshot.errorRatePercent).toFixed(1);
+      document.getElementById('snapSuccessRate').innerText = successRate + '%';
+
+      renderUptimeBar(data.uptimePercent30d);
+    }
+
+    function renderFallback(libellaId) {
+      document.getElementById('statusTitle').innerText = libellaId.toUpperCase() + ' — STATUS';
+      renderUptimeBar(100);
+    }
+
+    function renderUptimeBar(uptime) {
+      const container = document.getElementById('uptimeBar');
+      container.innerHTML = '';
+      for (let i = 0; i < 40; i++) {
+        const div = document.createElement('div');
+        div.className = 'uptime-block';
+        if (uptime < 99 && i === 38) div.className += ' degraded';
+        container.appendChild(div);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadStatus);
+  </script>
+</body>
+</html>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LIBELLA — The Universal Panopticon | $0 Telemetry & FinOps</title>
+  <link rel="icon" type="image/png" href="assets/logo_libella.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/logo_libella.png" alt="Libella Logo" class="logo">
+      <div class="brand-text">
+        <h1>LIBELLA <span class="tag">Panopticon v1.0.0</span></h1>
+        <p>Universal Telemetry, Edge Time-Series & Multi-Cloud FinOps ($0 Infrastructure)</p>
+      </div>
+    </div>
+
+    <div class="top-controls">
+      <div class="watchtower-selector">
+        <label for="libellaSelect">Watchtower:</label>
+        <select id="libellaSelect" class="clean-select">
+          <option value="default">Default Watchtower</option>
+        </select>
+        <button id="btnNewWatchtower" class="btn btn-ghost btn-sm" title="Crear nueva Libella">+ Nueva</button>
+      </div>
+
+      <select id="rangeSelect" class="clean-select" style="background:var(--bg-surface); padding: 0.4rem 0.8rem; border-radius:8px; border:1px solid var(--primary-border);">
+        <option value="1h">Última 1h</option>
+        <option value="24h" selected>Últimas 24h</option>
+        <option value="7d">Últimos 7d</option>
+        <option value="30d">Últimos 30d</option>
+      </select>
+
+      <a href="status.html" target="_blank" class="btn btn-ghost btn-sm" title="Abrir Status Page Pública">
+        🌐 Status Page
+      </a>
+
+      <button id="btnRefresh" class="btn btn-primary btn-sm">
+        🔄 Actualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- TAB BAR -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="tab-vitals">📊 1. Vitals (Métricas)</button>
+    <button class="tab-btn" data-tab="tab-logs">📜 2. Logs & Trazas</button>
+    <button class="tab-btn" data-tab="tab-finops">💰 3. FinOps & Costes</button>
+    <button class="tab-btn" data-tab="tab-breakers">⚡ 4. Circuit Breakers</button>
+    <button class="tab-btn" data-tab="tab-ommatidia">👁️ 5. Lentes (Ommatidia)</button>
+    <button class="tab-btn" data-tab="tab-config">🛸 6. Config Watchtower</button>
+    <button class="tab-btn" data-tab="tab-guide">📚 7. Guía & Onboarding</button>
+  </nav>
+
+  <!-- MAIN CONTAINER -->
+  <main class="container">
+
+    <!-- TAB 1: VITALS -->
+    <section id="tab-vitals" class="tab-pane active">
+      <div class="grid-cards">
+        <div class="card">
+          <div class="card-label">Latencia Media</div>
+          <div class="card-value" id="valAvgLatency">0 ms</div>
+          <div class="card-subtext">Basado en peticiones analizadas</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Percentil 95 (p95)</div>
+          <div class="card-value" id="valP95Latency" style="color:var(--primary);">0 ms</div>
+          <div class="card-subtext">p50: <span id="valP50">0ms</span> | p99: <span id="valP99">0ms</span></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Rendimiento (RPS)</div>
+          <div class="card-value" id="valRps">0.0</div>
+          <div class="card-subtext">Total eventos: <span id="valCount">0</span></div>
+        </div>
+        <div class="card">
+          <div class="card-label">Tasa de Error</div>
+          <div class="card-value" id="valErrorRate" style="color:#ef4444;">0.0%</div>
+          <div class="card-subtext"><span id="valErrorCount">0</span> fallos detectados</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>📈</span> Serie Temporal de Latencia (ms) & Rendimiento
+          </div>
+          <span class="badge badge-success">Live Edge Sampling</span>
+        </div>
+        <div class="chart-container">
+          <canvas id="vitalsChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: LOGS -->
+    <section id="tab-logs" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>📜</span> Explorador de Trazas Estructuradas</div>
+          <span class="badge badge-success" id="logsCountBadge">0 trazas</span>
+        </div>
+        <div class="logs-toolbar">
+          <input type="text" id="logSearchInput" class="search-input" placeholder="Buscar por texto, tag, servicio o ID...">
+          <select id="logLevelSelect" class="clean-select" style="background:var(--bg-surface); border:1px solid var(--primary-border); padding:0.45rem 0.8rem; border-radius:8px;">
+            <option value="">Todos los niveles</option>
+            <option value="info">INFO</option>
+            <option value="warn">WARN</option>
+            <option value="error">ERROR</option>
+            <option value="fatal">FATAL</option>
+          </select>
+        </div>
+        <div class="logs-stream" id="logsStream">
+          <div style="color:var(--text-gray); padding:1rem; text-align:center;">Cargando registros...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: FINOPS -->
+    <section id="tab-finops" class="tab-pane">
+      <div class="grid-cards">
+        <div class="card">
+          <div class="card-label">Gasto Total Acumulado</div>
+          <div class="card-value" id="valTotalCost" style="color:var(--primary);">$0.00</div>
+          <div class="card-subtext">Ventana seleccionada</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Gasto Medio Diario</div>
+          <div class="card-value" id="valDailyCost">$0.00</div>
+          <div class="card-subtext">Burn-rate diario calculado</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Proyección Mensual</div>
+          <div class="card-value" id="valProjectedCost">$0.00</div>
+          <div class="card-subtext">Basado en consumo real</div>
+        </div>
+        <div class="card">
+          <div class="card-label">Tokens AI Totales</div>
+          <div class="card-value" id="valAiTokens">0</div>
+          <div class="card-subtext">In: <span id="valTokensIn">0</span> | Out: <span id="valTokensOut">0</span></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>🤖</span> Desglose de Modelos de Inteligencia Artificial (LLMOps)</div>
+          <span class="badge badge-success">Calculado en Tiempo Real</span>
+        </div>
+        <div id="aiBreakdownContainer" style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.88rem;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--primary-border); color:var(--text-muted);">
+                <th style="padding:0.75rem;">Modelo</th>
+                <th style="padding:0.75rem;">Tokens Consumidos</th>
+                <th style="padding:0.75rem;">Coste Estimado (USD)</th>
+                <th style="padding:0.75rem;">Proporción</th>
+              </tr>
+            </thead>
+            <tbody id="aiTableBody">
+              <tr><td colspan="4" style="padding:1rem; text-align:center; color:var(--text-gray);">Sin eventos de IA registrados</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>☁️</span> Gasto por Proveedor Cloud (AWS, Vercel, Upstash, OpenAI)</div>
+        </div>
+        <div id="providerBreakdownContainer" style="display:flex; gap:1rem; flex-wrap:wrap;"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: BREAKERS -->
+    <section id="tab-breakers" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>⚡</span> Circuit Breakers Autónomos (Disyuntores de Coste y Salud)</div>
+          <div style="display:flex; gap:0.5rem;">
+            <button id="btnEvalBreakers" class="btn btn-ghost btn-sm">⚡ Evaluar Reglas</button>
+            <button id="btnNewBreaker" class="btn btn-primary btn-sm">+ Añadir Breaker</button>
+          </div>
+        </div>
+        <p style="color:var(--text-gray); font-size:0.84rem; margin-bottom:1rem;">
+          Los disyuntores de Libella vigilan anomalías y gastos fuera de control. Cuando se supera un umbral, ejecutan un <strong>Action Hook agnóstico</strong> (Webhook, GitHub Dispatch o alerta) para proteger tu infraestructura de forma inmediata.
+        </p>
+
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.86rem;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--primary-border); color:var(--text-muted);">
+                <th style="padding:0.6rem;">Estado</th>
+                <th style="padding:0.6rem;">Nombre</th>
+                <th style="padding:0.6rem;">Regla</th>
+                <th style="padding:0.6rem;">Acción Disparada</th>
+                <th style="padding:0.6rem;">Destino</th>
+                <th style="padding:0.6rem;">Último Disparo</th>
+              </tr>
+            </thead>
+            <tbody id="breakersTableBody">
+              <tr><td colspan="6" style="padding:1rem; text-align:center; color:var(--text-gray);">No hay disyuntores activos</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: OMMATIDIA -->
+    <section id="tab-ommatidia" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>👁️</span> Las 7 Lentes Polimórficas (Ommatidia Engine)</div>
+        </div>
+        <p style="color:var(--text-gray); font-size:0.84rem;">
+          Libella no impone un esquema rígido. Cada lente normaliza la telemetría recibida de proveedores cloud, frameworks serverless, agentes de IA o logs personalizados a coste $0.
+        </p>
+
+        <div class="lenses-grid">
+          <div class="lens-card">
+            <div class="lens-icon">☁️</div>
+            <div class="lens-title">Multi-Cloud Lens</div>
+            <div class="lens-desc">Ingesta de AWS CloudWatch, Cost & Usage Reports, Azure Monitor y GCP Logging.</div>
+            <span class="badge badge-success">Activa</span>
+          </div>
+
+          <div class="lens-card">
+            <div class="lens-icon">▲</div>
+            <div class="lens-title">Vercel & PaaS Lens</div>
+            <div class="lens-desc">Conexión a Vercel Log Drains, Netlify, Railway y Cloudflare Workers.</div>
+            <span class="badge badge-success">Activa</span>
+          </div>
+
+          <div class="lens-card">
+            <div class="lens-icon">⚡</div>
+            <div class="lens-title">Data & Upstash Lens</div>
+            <div class="lens-desc">Monitor de comandos/segundo y memoria en Upstash Redis, Kafka, Supabase y Neon.</div>
+            <span class="badge badge-success">Activa</span>
+          </div>
+
+          <div class="lens-card">
+            <div class="lens-icon">🤖</div>
+            <div class="lens-title">AI & LLMOps Lens</div>
+            <div class="lens-desc">Rastreo de tokens de entrada/salida y coste exacto en dólares (OpenAI, Claude, Gemini).</div>
+            <span class="badge badge-success">Activa</span>
+          </div>
+
+          <div class="lens-card">
+            <div class="lens-icon">🔭</div>
+            <div class="lens-title">OpenTelemetry Lens</div>
+            <div class="lens-desc">Receptor universal compatible con trazas y métricas estándar OTLP JSON.</div>
+            <span class="badge badge-success">Activa</span>
+          </div>
+
+          <div class="lens-card">
+            <div class="lens-icon">🐝</div>
+            <div class="lens-title">Terra Native Lens</div>
+            <div class="lens-desc">Integración directa con Formica, MockHive, Phryx, Syncada y Mantx.</div>
+            <span class="badge badge-success">Activa</span>
+          </div>
+
+          <div class="lens-card">
+            <div class="lens-icon">📝</div>
+            <div class="lens-title">BYOL Custom Lens</div>
+            <div class="lens-desc">Bring Your Own Logs: acepta cualquier JSON arbitrario con inferencia de campos.</div>
+            <span class="badge badge-success">Activa</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- INGEST SIMULATOR -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>🧪</span> Simulador de Ingesta Interactivo (Prueba en Vivo)</div>
+          <span class="badge badge-success">Click & Test</span>
+        </div>
+        <p style="color:var(--text-gray); font-size:0.84rem; margin-bottom:1rem;">
+          Haz clic en cualquiera de los botones para emitir eventos de telemetría reales al Watchtower activo y ver cómo reaccionan las gráficas, los logs y los disyuntores al instante:
+        </p>
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+          <button id="simVercel" class="btn btn-ghost btn-sm">▲ Simular Petición Vercel (120ms)</button>
+          <button id="simOpenAi" class="btn btn-ghost btn-sm">🤖 Simular Consulta GPT-4o (750 tokens)</button>
+          <button id="simClaude" class="btn btn-ghost btn-sm">🧠 Simular Consulta Claude 3.5 (1200 tokens)</button>
+          <button id="simUpstash" class="btn btn-ghost btn-sm">⚡ Simular Comandos Upstash</button>
+          <button id="simSpike" class="btn btn-ghost btn-sm" style="color:var(--warning); border-color:var(--warning-glow);">⚠️ Simular Pico de Latencia (2800ms)</button>
+          <button id="simFatal" class="btn btn-ghost btn-sm" style="color:var(--danger); border-color:var(--danger-glow);">🚨 Simular Log FATAL 500</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: CONFIG -->
+    <section id="tab-config" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>🛸</span> Configuración de Watchtower</div>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem;">
+          <div>
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">ID DEL WATCHTOWER</label>
+            <input type="text" id="cfgId" class="search-input" readonly style="width:100%; margin-top:0.3rem;">
+
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">NOMBRE</label>
+            <input type="text" id="cfgName" class="search-input" style="width:100%; margin-top:0.3rem;">
+
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">INGEST KEY (CLAVE SECRETA DE TELEMETRÍA)</label>
+            <div style="display:flex; gap:0.4rem; margin-top:0.3rem;">
+              <input type="text" id="cfgKey" class="search-input" readonly style="font-family:var(--font-mono); font-size:0.8rem;">
+              <button id="btnCopyKey" class="btn btn-ghost btn-sm">Copiar</button>
+            </div>
+
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">PRESUPUESTO MENSUAL (USD)</label>
+            <input type="number" id="cfgBudget" class="search-input" style="width:100%; margin-top:0.3rem;">
+          </div>
+
+          <div>
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">SNIPPET DE INTEGRACIÓN RÁPIDA (NODE.JS / TYPESCRIPT)</label>
+            <pre id="codeSnippetNode" style="background:#020604; border:1px solid var(--primary-border); padding:0.9rem; border-radius:8px; font-family:var(--font-mono); font-size:0.78rem; color:#86efac; margin-top:0.3rem; overflow-x:auto;">
+import { Libella } from 'terra-libella';
+
+const libella = new Libella({
+  libellaId: 'TU_ID',
+  vaultToken: process.env.GITHUB_PAT
+});
+
+// Registrar métricas y llamadas AI
+await libella.metric('checkout_latency_ms', 145);
+await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 7: GUIDE -->
+    <section id="tab-guide" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>📚</span> Guía Maestra & Onboarding de Libella</div>
+        </div>
+        <div style="line-height:1.6; font-size:0.9rem; color:#e2e8f0;">
+          <h3 style="color:var(--primary); margin-bottom:0.5rem;">¿Qué es Libella?</h3>
+          <p style="margin-bottom:1rem;">
+            Libella es el <strong>Panóptico Universal</strong> del ecosistema Terra: un motor centralizado de observabilidad, monitorización de latencias en series temporales y control de costes cloud (FinOps) que funciona sin servidores permanentes y sin bases de datos de pago.
+          </p>
+
+          <h3 style="color:var(--primary); margin-bottom:0.5rem;">Los 3 Pasos para Empezar:</h3>
+          <ol style="margin-left:1.5rem; margin-bottom:1.5rem;">
+            <li><strong>Crea un Watchtower:</strong> Asigna un centinela para tu aplicación o entorno (ej. <code>E-Commerce Prod</code>).</li>
+            <li><strong>Conecta tus Lentes:</strong> Configura el envío de eventos desde Vercel Log Drains, llamadas de OpenAI, métricas de AWS o peticiones HTTP estándar.</li>
+            <li><strong>Activa Disyuntores (Circuit Breakers):</strong> Define un techo de gasto en dólares o una tasa de error máxima para recibir alertas automáticas.</li>
+          </ol>
+
+          <h3 style="color:var(--primary); margin-bottom:0.5rem;">Almacenamiento $0 Perpetuo:</h3>
+          <p>
+            Los eventos en caliente de las últimas 24h residen en el vault de Git (<code>.libella-storage</code>). El <strong>Cronógrafo</strong> se despierta periódicamente para resumir y compactar millones de registros en resúmenes estadísticos permanentes sin saturar el almacenamiento.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: NUEVA LIBELLA -->
+  <div id="modalNewWatchtower" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:999; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:440px;">
+      <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">🛸 Crear Nueva Libella (Watchtower)</h3>
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE</label>
+      <input type="text" id="newWName" class="search-input" placeholder="ej. AI Agents Production" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PRESUPUESTO MENSUAL (USD)</label>
+      <input type="number" id="newWBudget" class="search-input" value="50" style="width:100%; margin-top:0.3rem; margin-bottom:1.4rem;">
+      <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
+        <button id="btnCancelNewW" class="btn btn-ghost btn-sm">Cancelar</button>
+        <button id="btnSaveNewW" class="btn btn-primary btn-sm">Crear Watchtower</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NUEVO BREAKER -->
+  <div id="modalNewBreaker" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:999; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:480px;">
+      <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">⚡ Configurar Circuit Breaker</h3>
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE DE LA REGLA</label>
+      <input type="text" id="brkName" class="search-input" placeholder="ej. Fuga de Gasto OpenAI" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:0.8rem;">
+        <div>
+          <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">MÉTRICA</label>
+          <select id="brkMetric" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
+            <option value="cost_daily_usd">Gasto Diario (USD)</option>
+            <option value="error_rate_percent">Tasa de Error (%)</option>
+            <option value="p95_latency_ms">Latencia p95 (ms)</option>
+            <option value="error_count">Total de Errores</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">UMBRAL</label>
+          <input type="number" id="brkThreshold" class="search-input" value="15" style="width:100%; margin-top:0.3rem;">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 2fr; gap:0.8rem; margin-bottom:1.2rem;">
+        <div>
+          <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">TIPO DE ACCIÓN</label>
+          <select id="brkActionType" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
+            <option value="webhook">Webhook HTTP</option>
+            <option value="alert">Alerta Chat</option>
+            <option value="dispatch">GitHub Dispatch</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">DESTINO (URL / REPO)</label>
+          <input type="text" id="brkTarget" class="search-input" placeholder="https://mi-api.com/emergency" style="width:100%; margin-top:0.3rem;">
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
+        <button id="btnCancelBrk" class="btn btn-ghost btn-sm">Cancelar</button>
+        <button id="btnSaveBrk" class="btn btn-primary btn-sm">Guardar Breaker</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Desarrollado bajo la filosofía <a href="https://github.com/amglogicalis/Terra" target="_blank">Terra</a> • $0 Infraestructura & Cero Dependencias • Libella Engine
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
