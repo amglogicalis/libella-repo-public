@@ -348,6 +348,22 @@
 
             <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">PRESUPUESTO MENSUAL (USD)</label>
             <input type="number" id="cfgBudget" class="search-input" style="width:100%; margin-top:0.3rem;">
+
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">PÁGINA DE ESTADO PÚBLICA (STATUS PAGE)</label>
+            <div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.4rem;">
+              <input type="checkbox" id="cfgStatusPageEnabled" style="accent-color:var(--primary); width:18px; height:18px;">
+              <label for="cfgStatusPageEnabled" style="font-size:0.85rem; color:#fff;">Habilitar Página de Estado para este Watchtower</label>
+            </div>
+
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:0.8rem; display:block;">CONTROL DE ACCESO Y VISIBILIDAD</label>
+            <select id="cfgStatusPageAccess" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
+              <option value="public">🌐 Pública (Accesible por cualquier usuario con la URL)</option>
+              <option value="private">🔒 Privada / Deshabilitada (Acceso bloqueado en status.html)</option>
+            </select>
+
+            <button id="btnSaveWatchtowerConfig" class="btn btn-primary btn-sm" style="margin-top:1.2rem; width:100%;">
+              💾 Guardar Configuración de Watchtower
+            </button>
           </div>
 
           <div>
@@ -403,9 +419,21 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
     <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:440px;">
       <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">🛸 Crear Nueva Libella (Watchtower)</h3>
       <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE</label>
-      <input type="text" id="newWName" class="search-input" placeholder="ej. AI Agents Production" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      <input type="text" id="newWName" class="search-input" placeholder="ej. AI Agents Production" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
       <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PRESUPUESTO MENSUAL (USD)</label>
-      <input type="number" id="newWBudget" class="search-input" value="50" style="width:100%; margin-top:0.3rem; margin-bottom:1.4rem;">
+      <input type="number" id="newWBudget" class="search-input" value="50" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+      
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PÁGINA DE ESTADO PÚBLICA</label>
+      <div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.3rem; margin-bottom:0.6rem;">
+        <input type="checkbox" id="newWStatusEnabled" checked style="accent-color:var(--primary); width:18px; height:18px;">
+        <label for="newWStatusEnabled" style="font-size:0.84rem; color:#fff;">Habilitar Status Page Pública</label>
+      </div>
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">VISIBILIDAD</label>
+      <select id="newWStatusAccess" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:1.4rem;">
+        <option value="public" selected>Pública (Cualquiera con enlace)</option>
+        <option value="private">Privada / Deshabilitada</option>
+      </select>
+
       <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
         <button id="btnCancelNewW" class="btn btn-ghost btn-sm">Cancelar</button>
         <button id="btnSaveNewW" class="btn btn-primary btn-sm">Crear Watchtower</button>
@@ -463,9 +491,21 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
     <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:440px;">
       <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">✏️ Editar Watchtower</h3>
       <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE</label>
-      <input type="text" id="editWName" class="search-input" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      <input type="text" id="editWName" class="search-input" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
       <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PRESUPUESTO MENSUAL (USD)</label>
-      <input type="number" id="editWBudget" class="search-input" style="width:100%; margin-top:0.3rem; margin-bottom:1.4rem;">
+      <input type="number" id="editWBudget" class="search-input" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+      
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PÁGINA DE ESTADO PÚBLICA</label>
+      <div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.3rem; margin-bottom:0.6rem;">
+        <input type="checkbox" id="editWStatusEnabled" style="accent-color:var(--primary); width:18px; height:18px;">
+        <label for="editWStatusEnabled" style="font-size:0.84rem; color:#fff;">Habilitar Status Page</label>
+      </div>
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">VISIBILIDAD</label>
+      <select id="editWStatusAccess" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:1.4rem;">
+        <option value="public">Pública (Cualquiera con enlace)</option>
+        <option value="private">Privada / Deshabilitada</option>
+      </select>
+
       <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
         <button id="btnCancelEditW" class="btn btn-ghost btn-sm">Cancelar</button>
         <button id="btnSaveEditW" class="btn btn-primary btn-sm">Guardar Cambios</button>
@@ -473,25 +513,123 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
     </div>
   </div>
 
-  <!-- MODAL: MONTAR LENTE -->
+  <!-- MODAL: MONTAR LENTE CON ACCESOS Y PARÁMETROS REALES -->
   <div id="modalMountLens" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:999; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:440px;">
-      <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">👁️ Montar Nueva Lente (Ommatidia)</h3>
-      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">TIPO DE LENTE</label>
+    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:520px; max-height:90vh; overflow-y:auto;">
+      <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">👁️ Montar Nueva Lente (Ommatidia Engine)</h3>
+      
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">TIPO DE LENTE / PROVEEDOR</label>
       <select id="mountLensType" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:0.8rem;">
-        <option value="byol">BYOL (Logs/Métricas Custom)</option>
-        <option value="ai">AI & LLMOps (Tokens & Costes)</option>
-        <option value="vercel">Vercel & Serverless PaaS</option>
-        <option value="aws">AWS CloudWatch & CUR</option>
-        <option value="upstash">Data & Upstash Redis/Kafka</option>
-        <option value="otel">OpenTelemetry OTLP</option>
-        <option value="terra">Terra Ecosystem Native</option>
+        <option value="vercel">▲ Vercel & Serverless PaaS (Log Drains)</option>
+        <option value="aws">☁️ AWS CloudWatch & CUR (Lambda/S3/SNS)</option>
+        <option value="upstash">⚡ Data & Upstash (Redis / Kafka / Supabase)</option>
+        <option value="ai">🤖 AI & LLMOps (OpenAI / Claude / Gemini)</option>
+        <option value="otel">🔭 OpenTelemetry (OTLP Collector)</option>
+        <option value="terra">🐝 Terra Native (Formica / Maskito / RollA)</option>
+        <option value="byol">📝 BYOL Universal (Webhook / Logs Custom)</option>
       </select>
+
       <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE DE LA INSTANCIA</label>
-      <input type="text" id="mountLensName" class="search-input" placeholder="ej. OpenAI Production Gateway" style="width:100%; margin-top:0.3rem; margin-bottom:1.4rem;">
+      <input type="text" id="mountLensName" class="search-input" placeholder="ej. Vercel Production Drain" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+
+      <!-- URL DE INGESTA GENERADA -->
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">DIRECCIÓN DE INGESTA REAL (WEBHOOK / ENDPOINT)</label>
+      <div id="mountPreviewEndpoint" style="background:#020604; border:1px solid var(--primary-border); padding:0.6rem; border-radius:6px; font-family:var(--font-mono); font-size:0.74rem; color:var(--primary); word-break:break-all; margin-top:0.3rem; margin-bottom:1rem;">
+        /api/ingest?key=...
+      </div>
+
+      <!-- CAMPOS ESPECÍFICOS SEGÚN EL PROVEEDOR -->
+      
+      <!-- 1. Vercel -->
+      <div id="fieldsVercel" class="lens-provider-fields">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">LOG DRAIN SECRET (OPCIONAL)</label>
+        <input type="password" id="vSecret" class="search-input" placeholder="Clave secreta para validar x-vercel-signature" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROJECT ID EN VERCEL</label>
+        <input type="text" id="vProjectId" class="search-input" placeholder="prj_xxxxxxxxxxxx" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">ENTORNO FILTRADO</label>
+        <select id="vEnv" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:1rem;">
+          <option value="production">Solo Producción (production)</option>
+          <option value="preview">Preview & Staging</option>
+          <option value="all">Todos los entornos</option>
+        </select>
+      </div>
+
+      <!-- 2. AWS -->
+      <div id="fieldsAws" class="lens-provider-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">REGIÓN AWS</label>
+        <input type="text" id="awsRegion" class="search-input" value="us-east-1" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CLOUDWATCH LOG GROUP</label>
+        <input type="text" id="awsLogGroup" class="search-input" placeholder="/aws/lambda/api-gateway-service" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">SNS TOPIC ARN (SI USA SUSCRIPCIÓN SNS)</label>
+        <input type="text" id="awsSnsArn" class="search-input" placeholder="arn:aws:sns:us-east-1:123456789:libella-topic" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- 3. Upstash -->
+      <div id="fieldsUpstash" class="lens-provider-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">UPSTASH REST URL</label>
+        <input type="text" id="upstashUrl" class="search-input" placeholder="https://flowing-hare-12345.upstash.io" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">UPSTASH READ-ONLY TOKEN</label>
+        <input type="password" id="upstashToken" class="search-input" placeholder="AXxxxxxxx=" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE BASE DE DATOS / CLÚSTER</label>
+        <input type="text" id="upstashDb" class="search-input" placeholder="cache-redis-prod" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- 4. AI & LLMOps -->
+      <div id="fieldsAi" class="lens-provider-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROVEEDOR PRINCIPAL</label>
+        <select id="aiProviderSelect" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:0.8rem;">
+          <option value="openai">OpenAI (GPT-4o, o3, etc.)</option>
+          <option value="anthropic">Anthropic (Claude 3.5 Sonnet / Haiku)</option>
+          <option value="gemini">Google Gemini (Gemini 2.0 / 1.5 Pro)</option>
+          <option value="groq">Groq LPU (Llama 3.3)</option>
+          <option value="openrouter">OpenRouter Multi-Provider</option>
+        </select>
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">MODELO POR DEFECTO</label>
+        <input type="text" id="aiDefaultModel" class="search-input" value="gpt-4o" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROXY BASE URL (OPCIONAL)</label>
+        <input type="text" id="aiProxyUrl" class="search-input" placeholder="https://api.openai.com/v1" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- 5. OpenTelemetry -->
+      <div id="fieldsOtel" class="lens-provider-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROTOCOLO OTLP</label>
+        <select id="otelProto" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:0.8rem;">
+          <option value="http/json">HTTP/JSON (Puerto 4318)</option>
+          <option value="http/protobuf">HTTP/Protobuf</option>
+          <option value="grpc">gRPC (Puerto 4317)</option>
+        </select>
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">SERVICE NAME</label>
+        <input type="text" id="otelServiceName" class="search-input" placeholder="payment-service" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- 6. Terra Native -->
+      <div id="fieldsTerra" class="lens-provider-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">APLICACIÓN DEL ECOSISTEMA TERRA</label>
+        <select id="terraAppSelect" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:0.8rem;">
+          <option value="formica">🐜 Formica (Database Engine)</option>
+          <option value="maskito">🦟 Maskito (Stress Testing & Swarm)</option>
+          <option value="rolla">🦔 RollA (Release Storage)</option>
+          <option value="phryx">🦗 Phryx (Mock Server)</option>
+          <option value="webbl">🕷️ Webbl (Edge Morph & Micro-Frontends)</option>
+          <option value="syncada">🪰 Syncada (Data Sync)</option>
+        </select>
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">STORAGE VAULT REPO ASOCIADO</label>
+        <input type="text" id="terraVaultRepo" class="search-input" placeholder=".formica-storage" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- 7. BYOL Custom -->
+      <div id="fieldsByol" class="lens-provider-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">AUTH HEADER (OPCIONAL)</label>
+        <input type="text" id="byolAuth" class="search-input" placeholder="Bearer mi-token-secreto" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CAMPO DE LATENCIA EN MS</label>
+        <input type="text" id="byolLatency" class="search-input" value="duration_ms" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CAMPO DE ERROR</label>
+        <input type="text" id="byolError" class="search-input" value="error" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
       <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
         <button id="btnCancelMountLens" class="btn btn-ghost btn-sm">Cancelar</button>
-        <button id="btnSaveMountLens" class="btn btn-primary btn-sm">Montar Lente</button>
+        <button id="btnSaveMountLens" class="btn btn-primary btn-sm">Montar y Conectar Lente</button>
       </div>
     </div>
   </div>

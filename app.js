@@ -1,6 +1,6 @@
 /**
  * LIBELLA — The Universal Panopticon
- * Client Application Logic (Full CRUD, 0 Mock Fallback, Real E2E Observability)
+ * Client Application Logic (Full Real Endpoints, Lens Credentials & Status Control)
  */
 
 let currentLibellaId = 'default';
@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupTabs();
   setupModals();
   setupSimulator();
+  setupMountLensDynamicFields();
   await loadWatchtowers();
   await refreshAll();
 
@@ -89,6 +90,33 @@ async function loadWatchtowers() {
     }
   } catch (err) {
     console.warn('Using offline / static fallback for watchtowers', err);
+    // Provide a default offline mirror entry if none loaded
+    if (activeLibellas.length === 0) {
+      activeLibellas = [
+        {
+          id: 'default',
+          name: 'Default Watchtower',
+          slug: 'default',
+          ingestKey: 'lbk_live_demo',
+          budgetUsdMonthly: 50,
+          statusPageEnabled: true,
+          statusPageAccess: 'public',
+          mountedLenses: [
+            {
+              id: 'lens_byol_default',
+              type: 'byol',
+              name: 'BYOL Universal Ingest Lens',
+              enabled: true,
+              config: { ingestUrl: '/api/ingest?key=lbk_live_demo&type=byol' },
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        },
+      ];
+      libellaSelect.innerHTML = '<option value="default">Default Watchtower</option>';
+      currentLibellaId = 'default';
+      updateConfigTab();
+    }
   }
 }
 
@@ -106,7 +134,7 @@ async function refreshAll(showLoading = true) {
 }
 
 // -------------------------------------------------------------
-// 1. Quadrant: Vitals & Chart
+// 1. Quadrant: Vitals & Chart (100% Real Zero-State Baseline)
 // -------------------------------------------------------------
 let latestVitals = null;
 
@@ -239,7 +267,7 @@ async function loadIncidents() {
       const container = document.getElementById('activeIncidentsContainer');
       const incs = data.activeIncidents || [];
       if (incs.length === 0) {
-        container.innerHTML = `<div style="color:var(--text-gray); font-size:0.85rem; padding:0.4rem 0;">✔ Todos los sistemas operativos (Estado: <strong style="color:var(--primary);">${data.overallStatus.toUpperCase()}</strong>). Sin incidentes activos.</div>`;
+        container.innerHTML = `<div style="color:var(--text-gray); font-size:0.85rem; padding:0.4rem 0;">✔ Todos los sistemas operativos (Estado: <strong style="color:var(--primary);">${(data.overallStatus || 'OPERATIONAL').toUpperCase()}</strong>). Sin incidentes activos.</div>`;
         return;
       }
       container.innerHTML = incs.map((inc) => {
@@ -249,10 +277,10 @@ async function loadIncidents() {
           <div style="background:var(--bg-surface); border:1px solid ${sevColor}; padding:0.75rem 1rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
             <div>
               <div style="font-weight:700; color:#fff;">
-                <span class="badge" style="background:${sevColor}; color:#000; margin-right:0.4rem;">${inc.severity.toUpperCase()}</span>
+                <span class="badge" style="background:${sevColor}; color:#000; margin-right:0.4rem;">${(inc.severity || 'MAJOR').toUpperCase()}</span>
                 ${escapeHtml(inc.title)}
               </div>
-              <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.25rem;">${escapeHtml(inc.message || '')}</div>
+              <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.25rem;">${escapeHtml(inc.message || inc.description || '')}</div>
               <div style="font-size:0.75rem; color:var(--text-gray); margin-top:0.25rem;">Declarado: ${dateStr}</div>
             </div>
             <button class="btn btn-primary btn-sm" onclick="openResolveIncidentModal('${inc.id}', '${escapeHtml(inc.title)}')">Resolver</button>
@@ -309,8 +337,8 @@ function renderLogs(logs) {
   }).join('');
 }
 
-document.getElementById('logSearchInput').addEventListener('input', () => loadLogs());
-document.getElementById('logLevelSelect').addEventListener('change', () => loadLogs());
+document.getElementById('logSearchInput')?.addEventListener('input', () => loadLogs());
+document.getElementById('logLevelSelect')?.addEventListener('change', () => loadLogs());
 
 // -------------------------------------------------------------
 // 3. Quadrant: FinOps
@@ -420,7 +448,7 @@ window.deleteBreaker = async (ruleId) => {
   }
 };
 
-document.getElementById('btnEvalBreakers').addEventListener('click', async () => {
+document.getElementById('btnEvalBreakers')?.addEventListener('click', async () => {
   try {
     const res = await fetch(`/api/libellas/${currentLibellaId}/breakers/evaluate`, { method: 'POST' });
     if (res.ok) {
@@ -432,36 +460,164 @@ document.getElementById('btnEvalBreakers').addEventListener('click', async () =>
 });
 
 // -------------------------------------------------------------
-// 5. Quadrant: Lenses (Ommatidia Engine Full CRUD)
+// 5. Quadrant: Lenses (Ommatidia Engine Full CRUD & Real Config)
 // -------------------------------------------------------------
 async function loadMountedLenses() {
+  const container = document.getElementById('mountedLensesList');
+  if (!container) return;
+
+  const currentW = activeLibellas.find((w) => w.id === currentLibellaId);
+  const host = window.location.origin || 'http://localhost:4578';
+  const key = currentW?.ingestKey || 'lbk_live';
+
+  let lenses = [];
+
   try {
     const res = await fetch(`/api/libellas/${currentLibellaId}/lenses`);
     if (res.ok) {
-      const lenses = await res.json();
-      const container = document.getElementById('mountedLensesList');
-      if (!lenses || lenses.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-gray); font-size:0.85rem; padding:0.5rem 0;">No hay lentes montadas en este Watchtower.</div>';
-        return;
-      }
-      container.innerHTML = lenses.map((l) => `
-        <div style="background:var(--bg-surface); border:1px solid var(--primary-border); padding:0.75rem 1rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+      lenses = await res.json();
+    } else {
+      lenses = currentW?.mountedLenses || [];
+    }
+  } catch {
+    lenses = currentW?.mountedLenses || [];
+  }
+
+  if (!lenses || lenses.length === 0) {
+    container.innerHTML = `
+      <div style="background:var(--bg-surface); border:1px dashed var(--primary-border); border-radius:10px; padding:1.5rem; text-align:center;">
+        <p style="color:var(--text-gray); font-size:0.9rem; margin-bottom:0.8rem;">
+          No hay lentes montadas en este Watchtower.
+        </p>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('modalMountLens').style.display='flex'">
+          + Montar Lente (Vercel, AWS, Upstash, IA, OTel)
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = lenses.map((l) => {
+    const ingestUrl = `${host}/api/ingest?key=${key}&lens=${l.id}&type=${l.type}`;
+    const cfg = l.config || {};
+    
+    // Format active credentials/params
+    const details = [];
+    if (l.type === 'vercel') {
+      if (cfg.vercelProjectId) details.push(`Project: <code>${escapeHtml(cfg.vercelProjectId)}</code>`);
+      if (cfg.vercelEnvironment) details.push(`Entorno: <code>${cfg.vercelEnvironment}</code>`);
+      if (cfg.webhookSecret) details.push(`Secret: <code>••••••••</code>`);
+    } else if (l.type === 'aws') {
+      if (cfg.awsRegion) details.push(`Región: <code>${escapeHtml(cfg.awsRegion)}</code>`);
+      if (cfg.awsLogGroupName) details.push(`Log Group: <code>${escapeHtml(cfg.awsLogGroupName)}</code>`);
+      if (cfg.awsSnsTopicArn) details.push(`SNS ARN: <code>${escapeHtml(cfg.awsSnsTopicArn)}</code>`);
+    } else if (l.type === 'upstash') {
+      if (cfg.upstashRestUrl) details.push(`REST URL: <code>${escapeHtml(cfg.upstashRestUrl)}</code>`);
+      if (cfg.upstashDatabaseName) details.push(`DB: <code>${escapeHtml(cfg.upstashDatabaseName)}</code>`);
+      if (cfg.upstashReadToken) details.push(`Token: <code>••••••••</code>`);
+    } else if (l.type === 'ai') {
+      if (cfg.aiProvider) details.push(`Provider: <code>${escapeHtml(cfg.aiProvider)}</code>`);
+      if (cfg.aiDefaultModel) details.push(`Model: <code>${escapeHtml(cfg.aiDefaultModel)}</code>`);
+      if (cfg.aiProxyBaseUrl) details.push(`Proxy: <code>${escapeHtml(cfg.aiProxyBaseUrl)}</code>`);
+    } else if (l.type === 'otel') {
+      if (cfg.otlpProtocol) details.push(`Protocolo: <code>${escapeHtml(cfg.otlpProtocol)}</code>`);
+      if (cfg.otlpServiceName) details.push(`Servicio: <code>${escapeHtml(cfg.otlpServiceName)}</code>`);
+    } else if (l.type === 'terra') {
+      if (cfg.terraAppName) details.push(`App Terra: <code>${escapeHtml(cfg.terraAppName)}</code>`);
+      if (cfg.terraStorageVault) details.push(`Vault: <code>${escapeHtml(cfg.terraStorageVault)}</code>`);
+    } else {
+      if (cfg.byolAuthHeader) details.push(`Auth: <code>${escapeHtml(cfg.byolAuthHeader)}</code>`);
+      if (cfg.byolLatencyField) details.push(`Latencia: <code>${escapeHtml(cfg.byolLatencyField)}</code>`);
+    }
+
+    const detailsStr = details.length > 0
+      ? details.join(' • ')
+      : '<span style="color:var(--text-gray);">Configuración por defecto lista para ingesta HTTP</span>';
+
+    // Provider Specific Setup Guide
+    let guideSnippet = '';
+    if (l.type === 'vercel') {
+      guideSnippet = `// En Vercel: Project Settings > Log Drains > Add Log Drain (JSON)
+URL: ${ingestUrl}
+Secret: ${cfg.webhookSecret || '(Opcional)'}`;
+    } else if (l.type === 'aws') {
+      guideSnippet = `# AWS CLI Subscription Filter:
+aws logs put-subscription-filter \\
+  --log-group-name "${cfg.awsLogGroupName || '/aws/lambda/my-service'}" \\
+  --filter-name "LibellaFilter" \\
+  --destination-arn "${cfg.awsSnsTopicArn || 'arn:aws:sns:...'}" \\
+  --filter-pattern ""`;
+    } else if (l.type === 'ai') {
+      guideSnippet = `// En tu SDK de Node / Edge:
+await libella.aiCost({
+  model: '${cfg.aiDefaultModel || 'gpt-4o'}',
+  inputTokens: 500,
+  outputTokens: 120,
+  libellaId: '${currentLibellaId}'
+});`;
+    } else {
+      guideSnippet = `# Ingesta Directa vía cURL / Webhook:
+curl -X POST "${ingestUrl}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "api_latency_ms", "value": 142, "unit": "ms"}'`;
+    }
+
+    return `
+      <div style="background:var(--bg-surface); border:1px solid var(--primary-border); padding:1rem 1.2rem; border-radius:12px; margin-bottom:0.8rem;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:0.5rem;">
           <div>
-            <div style="font-weight:700; color:#fff; font-size:0.92rem;">
-              ${escapeHtml(l.name)} 
-              <span style="font-size:0.75rem; color:var(--primary); font-family:var(--font-mono); font-weight:normal; margin-left:0.4rem;">[${l.type.toUpperCase()}]</span>
+            <div style="font-weight:700; color:#fff; font-size:1rem; display:flex; align-items:center; gap:0.5rem;">
+              <span>${escapeHtml(l.name)}</span>
+              <span class="badge" style="background:rgba(20,219,96,0.15); color:var(--primary); font-family:var(--font-mono); font-size:0.75rem;">${l.type.toUpperCase()}</span>
+              <span class="badge badge-success">Activa</span>
             </div>
-            <div style="font-size:0.75rem; color:var(--text-gray); font-family:var(--font-mono); margin-top:0.15rem;">ID: ${l.id}</div>
+            <div style="font-size:0.78rem; color:var(--text-muted); font-family:var(--font-mono); margin-top:0.25rem;">
+              ID: ${l.id}
+            </div>
           </div>
           <div style="display:flex; gap:0.4rem;">
+            <button class="btn btn-ghost btn-sm" onclick="toggleLensGuide('${l.id}')">ℹ️ Guía de Conexión</button>
             <button class="btn btn-ghost btn-sm" onclick="openEditLensModal('${l.id}', '${escapeHtml(l.name)}')" title="Editar">✏️</button>
             <button class="btn btn-ghost btn-sm" onclick="deleteLens('${l.id}')" title="Desmontar" style="color:var(--danger);">🗑️</button>
           </div>
         </div>
-      `).join('');
-    }
-  } catch {}
+
+        <div style="margin-top:0.8rem; font-size:0.82rem; color:#cbd5e1; background:rgba(0,0,0,0.3); padding:0.6rem 0.8rem; border-radius:8px; border:1px solid rgba(255,255,255,0.04);">
+          ${detailsStr}
+        </div>
+
+        <div style="margin-top:0.8rem;">
+          <label style="font-size:0.74rem; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Webhook Ingestion URL (Copia esta dirección en tu proveedor):</label>
+          <div style="display:flex; gap:0.4rem; margin-top:0.25rem;">
+            <input type="text" class="search-input" readonly value="${ingestUrl}" id="url_${l.id}" style="font-family:var(--font-mono); font-size:0.78rem; width:100%; color:var(--primary);">
+            <button class="btn btn-primary btn-sm" onclick="copyToClipboard('url_${l.id}')">📋 Copiar</button>
+          </div>
+        </div>
+
+        <!-- Accordion Guide -->
+        <div id="guide_${l.id}" style="display:none; margin-top:0.8rem; background:#020604; border:1px solid var(--primary-border); border-radius:8px; padding:0.8rem;">
+          <div style="font-size:0.78rem; font-weight:700; color:var(--primary); margin-bottom:0.4rem;">Instrucciones de Integración:</div>
+          <pre style="margin:0; font-family:var(--font-mono); font-size:0.76rem; color:#86efac; overflow-x:auto;">${escapeHtml(guideSnippet)}</pre>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
+
+window.toggleLensGuide = (lensId) => {
+  const el = document.getElementById(`guide_${lensId}`);
+  if (el) {
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  }
+};
+
+window.copyToClipboard = (elementId) => {
+  const el = document.getElementById(elementId);
+  if (el) {
+    navigator.clipboard.writeText(el.value);
+    alert('URL de ingesta copiada al portapapeles.');
+  }
+};
 
 window.openEditLensModal = (lensId, name) => {
   document.getElementById('editLensId').value = lensId;
@@ -480,6 +636,40 @@ window.deleteLens = async (lensId) => {
     alert('Error al desmontar lente: ' + err.message);
   }
 };
+
+function setupMountLensDynamicFields() {
+  const select = document.getElementById('mountLensType');
+  const preview = document.getElementById('mountPreviewEndpoint');
+  if (!select) return;
+
+  const updateFields = () => {
+    const type = select.value;
+    const host = window.location.origin || 'http://localhost:4578';
+    const currentW = activeLibellas.find((w) => w.id === currentLibellaId);
+    const key = currentW?.ingestKey || 'lbk_live';
+
+    if (preview) {
+      preview.innerText = `${host}/api/ingest?key=${key}&type=${type}`;
+    }
+
+    // Hide all
+    document.querySelectorAll('.lens-provider-fields').forEach((div) => {
+      div.style.display = 'none';
+    });
+
+    // Show selected
+    if (type === 'vercel') document.getElementById('fieldsVercel')?.style.setProperty('display', 'block');
+    if (type === 'aws') document.getElementById('fieldsAws')?.style.setProperty('display', 'block');
+    if (type === 'upstash') document.getElementById('fieldsUpstash')?.style.setProperty('display', 'block');
+    if (type === 'ai') document.getElementById('fieldsAi')?.style.setProperty('display', 'block');
+    if (type === 'otel') document.getElementById('fieldsOtel')?.style.setProperty('display', 'block');
+    if (type === 'terra') document.getElementById('fieldsTerra')?.style.setProperty('display', 'block');
+    if (type === 'byol') document.getElementById('fieldsByol')?.style.setProperty('display', 'block');
+  };
+
+  select.addEventListener('change', updateFields);
+  updateFields();
+}
 
 // -------------------------------------------------------------
 // 6. Ingest Simulator (Live Click & Test)
@@ -566,6 +756,13 @@ function updateConfigTab() {
   document.getElementById('cfgKey').value = current.ingestKey || 'lbk_live';
   document.getElementById('cfgBudget').value = current.budgetUsdMonthly || 50;
 
+  // Status Page Controls
+  const statusChk = document.getElementById('cfgStatusPageEnabled');
+  if (statusChk) statusChk.checked = current.statusPageEnabled !== false;
+
+  const statusAccess = document.getElementById('cfgStatusPageAccess');
+  if (statusAccess) statusAccess.value = current.statusPageAccess || (current.statusPageEnabled !== false ? 'public' : 'private');
+
   const nodeSnippet = `import { Libella } from 'terra-libella';
 
 const libella = new Libella({
@@ -585,12 +782,36 @@ document.getElementById('btnCopyKey')?.addEventListener('click', () => {
   alert('Ingest Key copiada al portapapeles');
 });
 
+// Save from tab 6 directly
+document.getElementById('btnSaveWatchtowerConfig')?.addEventListener('click', async () => {
+  const name = document.getElementById('cfgName').value.trim();
+  const budget = Number(document.getElementById('cfgBudget').value);
+  const statusPageEnabled = document.getElementById('cfgStatusPageEnabled').checked;
+  const statusPageAccess = document.getElementById('cfgStatusPageAccess').value;
+
+  try {
+    const res = await fetch(`/api/libellas/${currentLibellaId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, budgetUsdMonthly: budget, statusPageEnabled, statusPageAccess }),
+    });
+    if (res.ok) {
+      alert('Configuración de Watchtower y Status Page actualizada con éxito.');
+      await loadWatchtowers();
+    }
+  } catch (err) {
+    alert('Error al guardar configuración: ' + err.message);
+  }
+});
+
 // Watchtower Top Controls (Edit & Delete)
 document.getElementById('btnEditWatchtower')?.addEventListener('click', () => {
   const current = activeLibellas.find((w) => w.id === currentLibellaId);
   if (!current) return;
   document.getElementById('editWName').value = current.name;
   document.getElementById('editWBudget').value = current.budgetUsdMonthly || 50;
+  document.getElementById('editWStatusEnabled').checked = current.statusPageEnabled !== false;
+  document.getElementById('editWStatusAccess').value = current.statusPageAccess || 'public';
   document.getElementById('modalEditWatchtower').style.display = 'flex';
 });
 
@@ -601,13 +822,15 @@ document.getElementById('btnCancelEditW')?.addEventListener('click', () => {
 document.getElementById('btnSaveEditW')?.addEventListener('click', async () => {
   const name = document.getElementById('editWName').value.trim();
   const budget = Number(document.getElementById('editWBudget').value);
+  const statusPageEnabled = document.getElementById('editWStatusEnabled').checked;
+  const statusPageAccess = document.getElementById('editWStatusAccess').value;
   if (!name) return alert('Especifica un nombre');
 
   try {
     const res = await fetch(`/api/libellas/${currentLibellaId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, budgetUsdMonthly: budget }),
+      body: JSON.stringify({ name, budgetUsdMonthly: budget, statusPageEnabled, statusPageAccess }),
     });
     if (res.ok) {
       document.getElementById('modalEditWatchtower').style.display = 'none';
@@ -645,13 +868,15 @@ function setupModals() {
   document.getElementById('btnSaveNewW')?.addEventListener('click', async () => {
     const name = document.getElementById('newWName').value.trim();
     const budget = Number(document.getElementById('newWBudget').value) || 50;
+    const statusPageEnabled = document.getElementById('newWStatusEnabled').checked;
+    const statusPageAccess = document.getElementById('newWStatusAccess').value;
     if (!name) return alert('Especifica un nombre');
 
     try {
       const res = await fetch('/api/libellas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, budgetUsdMonthly: budget }),
+        body: JSON.stringify({ name, budgetUsdMonthly: budget, statusPageEnabled, statusPageAccess }),
       });
       if (res.ok) {
         mWatchtower.style.display = 'none';
@@ -673,11 +898,41 @@ function setupModals() {
     const type = document.getElementById('mountLensType').value;
     const name = document.getElementById('mountLensName').value.trim() || `${type.toUpperCase()} Lens`;
 
+    // Extract real provider-specific configuration
+    const config = {};
+    if (type === 'vercel') {
+      config.webhookSecret = document.getElementById('vSecret')?.value.trim();
+      config.vercelProjectId = document.getElementById('vProjectId')?.value.trim();
+      config.vercelEnvironment = document.getElementById('vEnv')?.value;
+    } else if (type === 'aws') {
+      config.awsRegion = document.getElementById('awsRegion')?.value.trim();
+      config.awsLogGroupName = document.getElementById('awsLogGroup')?.value.trim();
+      config.awsSnsTopicArn = document.getElementById('awsSnsArn')?.value.trim();
+    } else if (type === 'upstash') {
+      config.upstashRestUrl = document.getElementById('upstashUrl')?.value.trim();
+      config.upstashReadToken = document.getElementById('upstashToken')?.value.trim();
+      config.upstashDatabaseName = document.getElementById('upstashDb')?.value.trim();
+    } else if (type === 'ai') {
+      config.aiProvider = document.getElementById('aiProviderSelect')?.value;
+      config.aiDefaultModel = document.getElementById('aiDefaultModel')?.value.trim();
+      config.aiProxyBaseUrl = document.getElementById('aiProxyUrl')?.value.trim();
+    } else if (type === 'otel') {
+      config.otlpProtocol = document.getElementById('otelProto')?.value;
+      config.otlpServiceName = document.getElementById('otelServiceName')?.value.trim();
+    } else if (type === 'terra') {
+      config.terraAppName = document.getElementById('terraAppSelect')?.value;
+      config.terraStorageVault = document.getElementById('terraVaultRepo')?.value.trim();
+    } else if (type === 'byol') {
+      config.byolAuthHeader = document.getElementById('byolAuth')?.value.trim();
+      config.byolLatencyField = document.getElementById('byolLatency')?.value.trim();
+      config.byolErrorField = document.getElementById('byolError')?.value.trim();
+    }
+
     try {
       const res = await fetch(`/api/libellas/${currentLibellaId}/lenses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, name }),
+        body: JSON.stringify({ type, name, config }),
       });
       if (res.ok) {
         mMountLens.style.display = 'none';
