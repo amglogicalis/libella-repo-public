@@ -1,12 +1,12 @@
 /**
  * LIBELLA — The Universal Panopticon
- * Client Application Logic
+ * Client Application Logic (Full CRUD, 0 Mock Fallback, Real E2E Observability)
  */
 
 let currentLibellaId = 'default';
 let currentTimeRange = '24h';
 let activeLibellas = [];
-let vitalsChartInstance = null;
+let allBreakers = [];
 
 // DOM Elements
 const libellaSelect = document.getElementById('libellaSelect');
@@ -46,6 +46,9 @@ function setupTabs() {
       if (targetId === 'tab-vitals') {
         drawVitalsChart();
       }
+      if (targetId === 'tab-ommatidia') {
+        loadMountedLenses();
+      }
     });
   });
 
@@ -77,7 +80,9 @@ async function loadWatchtowers() {
         libellaSelect.appendChild(opt);
       }
       if (activeLibellas.length > 0) {
-        currentLibellaId = activeLibellas[0].id;
+        if (!activeLibellas.some((w) => w.id === currentLibellaId)) {
+          currentLibellaId = activeLibellas[0].id;
+        }
         libellaSelect.value = currentLibellaId;
         updateConfigTab();
       }
@@ -94,12 +99,14 @@ async function refreshAll(showLoading = true) {
     loadLogs(),
     loadFinOps(),
     loadBreakers(),
+    loadMountedLenses(),
+    loadIncidents(),
   ]);
   if (showLoading) btnRefresh.innerText = '🔄 Actualizar';
 }
 
 // -------------------------------------------------------------
-// 1. Quadrant: Vitals
+// 1. Quadrant: Vitals & Chart
 // -------------------------------------------------------------
 let latestVitals = null;
 
@@ -136,12 +143,6 @@ function drawVitalsChart() {
 
   ctx.clearRect(0, 0, w, h);
 
-  const buckets = (latestVitals && latestVitals.buckets && latestVitals.buckets.length > 0)
-    ? latestVitals.buckets
-    : Array.from({ length: 12 }, (_, i) => ({ avgLatency: 20 + Math.sin(i) * 15 }));
-
-  const maxVal = Math.max(...buckets.map((b) => b.avgLatency || 10), 50);
-
   // Background Grid
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
   ctx.lineWidth = 1;
@@ -152,12 +153,35 @@ function drawVitalsChart() {
     ctx.stroke();
   }
 
+  const hasData = latestVitals && latestVitals.count > 0 && latestVitals.buckets && latestVitals.buckets.length > 0;
+
+  if (!hasData) {
+    // 100% Real Zero-State Baseline (No synthetic sine-wave mocks)
+    ctx.beginPath();
+    ctx.moveTo(0, h - 25);
+    ctx.lineTo(w, h - 25);
+    ctx.strokeStyle = 'rgba(20, 219, 96, 0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.font = '13px Outfit, sans-serif';
+    ctx.fillStyle = 'rgba(156, 163, 175, 0.6)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Sin métricas registradas en este intervalo (0 ops analizadas)', w / 2, h / 2);
+    return;
+  }
+
+  const buckets = latestVitals.buckets;
+  const maxVal = Math.max(...buckets.map((b) => b.avgLatency || 1), 20);
+
   // Draw smooth path
   ctx.beginPath();
   const step = w / (buckets.length - 1 || 1);
   const points = buckets.map((b, i) => {
     const x = i * step;
-    const y = h - (b.avgLatency / maxVal) * (h * 0.75) - 20;
+    const y = h - ((b.avgLatency || 0) / maxVal) * (h * 0.75) - 20;
     return { x, y };
   });
 
@@ -205,6 +229,47 @@ function drawVitalsChart() {
 }
 
 // -------------------------------------------------------------
+// Incidents (Pulse) Live Management
+// -------------------------------------------------------------
+async function loadIncidents() {
+  try {
+    const res = await fetch(`/api/libellas/${currentLibellaId}/pulse`);
+    if (res.ok) {
+      const data = await res.json();
+      const container = document.getElementById('activeIncidentsContainer');
+      const incs = data.activeIncidents || [];
+      if (incs.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-gray); font-size:0.85rem; padding:0.4rem 0;">✔ Todos los sistemas operativos (Estado: <strong style="color:var(--primary);">${data.overallStatus.toUpperCase()}</strong>). Sin incidentes activos.</div>`;
+        return;
+      }
+      container.innerHTML = incs.map((inc) => {
+        const sevColor = inc.severity === 'critical' ? 'var(--danger)' : inc.severity === 'major' ? 'var(--warning)' : '#38bdf8';
+        const dateStr = inc.timestamp ? inc.timestamp.slice(0, 19).replace('T', ' ') : 'Reciente';
+        return `
+          <div style="background:var(--bg-surface); border:1px solid ${sevColor}; padding:0.75rem 1rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:700; color:#fff;">
+                <span class="badge" style="background:${sevColor}; color:#000; margin-right:0.4rem;">${inc.severity.toUpperCase()}</span>
+                ${escapeHtml(inc.title)}
+              </div>
+              <div style="font-size:0.82rem; color:var(--text-muted); margin-top:0.25rem;">${escapeHtml(inc.message || '')}</div>
+              <div style="font-size:0.75rem; color:var(--text-gray); margin-top:0.25rem;">Declarado: ${dateStr}</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openResolveIncidentModal('${inc.id}', '${escapeHtml(inc.title)}')">Resolver</button>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch {}
+}
+
+window.openResolveIncidentModal = (incId, title) => {
+  document.getElementById('resolveIncId').value = incId;
+  document.getElementById('resolveIncText').innerText = `Vas a marcar como resuelto el incidente: "${title}"`;
+  document.getElementById('modalResolveIncident').style.display = 'flex';
+};
+
+// -------------------------------------------------------------
 // 2. Quadrant: Logs
 // -------------------------------------------------------------
 let allLogs = [];
@@ -233,12 +298,12 @@ function renderLogs(logs) {
 
   stream.innerHTML = logs.map((l) => {
     const time = (l.timestamp || '').slice(11, 19) || 'now';
-    const lvl = l.level.toLowerCase();
+    const lvl = (l.level || 'info').toLowerCase();
     return `
       <div class="log-row">
         <span class="log-time">${time}</span>
-        <span class="log-level ${lvl}">[${l.level.toUpperCase()}]</span>
-        <span class="log-msg">${escapeHtml(l.message)}</span>
+        <span class="log-level ${lvl}">[${(l.level || 'info').toUpperCase()}]</span>
+        <span class="log-msg">${escapeHtml(l.message || '')}</span>
       </div>
     `;
   }).join('');
@@ -270,8 +335,8 @@ async function loadFinOps() {
       } else {
         tbody.innerHTML = models.map(([m, cost]) => `
           <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-            <td style="padding:0.75rem; font-weight:600; color:#fff;">${m}</td>
-            <td style="padding:0.75rem; font-family:var(--font-mono);">${f.aiTokensTotal.input + f.aiTokensTotal.output}</td>
+            <td style="padding:0.75rem; font-weight:600; color:#fff;">${escapeHtml(m)}</td>
+            <td style="padding:0.75rem; font-family:var(--font-mono);">${(f.aiTokensTotal.input + f.aiTokensTotal.output).toLocaleString()}</td>
             <td style="padding:0.75rem; color:var(--primary); font-family:var(--font-mono);">$${cost}</td>
             <td style="padding:0.75rem;"><span class="badge badge-success">Activo</span></td>
           </tr>
@@ -283,7 +348,7 @@ async function loadFinOps() {
       const providers = Object.entries(f.byProvider || {});
       provBox.innerHTML = providers.map(([p, amt]) => `
         <div style="background:var(--bg-surface); border:1px solid var(--primary-border); padding:0.8rem 1.2rem; border-radius:10px; min-width:140px;">
-          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${p}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">${escapeHtml(p)}</div>
           <div style="font-size:1.25rem; font-weight:800; color:#fff; font-family:var(--font-mono); margin-top:0.2rem;">$${amt}</div>
         </div>
       `).join('');
@@ -292,20 +357,20 @@ async function loadFinOps() {
 }
 
 // -------------------------------------------------------------
-// 4. Quadrant: Circuit Breakers
+// 4. Quadrant: Circuit Breakers (Full CRUD)
 // -------------------------------------------------------------
 async function loadBreakers() {
   try {
     const res = await fetch(`/api/libellas/${currentLibellaId}/breakers`);
     if (res.ok) {
-      const list = await res.json();
+      allBreakers = await res.json();
       const tbody = document.getElementById('breakersTableBody');
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="padding:1rem; text-align:center; color:var(--text-gray);">No hay disyuntores activos para esta Libella</td></tr>';
+      if (allBreakers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="padding:1rem; text-align:center; color:var(--text-gray);">No hay disyuntores activos para esta Libella</td></tr>';
         return;
       }
 
-      tbody.innerHTML = list.map((b) => {
+      tbody.innerHTML = allBreakers.map((b) => {
         const isTripped = b.status === 'tripped';
         const stBadge = isTripped
           ? '<span class="badge badge-danger">DISPARADO</span>'
@@ -315,17 +380,45 @@ async function loadBreakers() {
         return `
           <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
             <td style="padding:0.6rem;">${stBadge}</td>
-            <td style="padding:0.6rem; font-weight:600; color:#fff;">${b.name}</td>
+            <td style="padding:0.6rem; font-weight:600; color:#fff;">${escapeHtml(b.name)}</td>
             <td style="padding:0.6rem; font-family:var(--font-mono);">${b.metric} ${b.op} ${b.threshold}</td>
             <td style="padding:0.6rem; text-transform:uppercase;">${b.actionType}</td>
-            <td style="padding:0.6rem; color:var(--text-muted); font-size:0.8rem;">${b.actionTarget}</td>
+            <td style="padding:0.6rem; color:var(--text-muted); font-size:0.8rem;">${escapeHtml(b.actionTarget)}</td>
             <td style="padding:0.6rem; color:var(--text-gray);">${last}</td>
+            <td style="padding:0.6rem; text-align:right;">
+              <button class="btn btn-ghost btn-sm" onclick="openEditBreakerModal('${b.id}')" title="Editar">✏️</button>
+              <button class="btn btn-ghost btn-sm" onclick="deleteBreaker('${b.id}')" title="Eliminar" style="color:var(--danger);">🗑️</button>
+            </td>
           </tr>
         `;
       }).join('');
     }
   } catch {}
 }
+
+window.openEditBreakerModal = (ruleId) => {
+  const b = allBreakers.find((r) => r.id === ruleId);
+  if (!b) return;
+  document.getElementById('editBrkId').value = b.id;
+  document.getElementById('editBrkName').value = b.name;
+  document.getElementById('editBrkMetric').value = b.metric;
+  document.getElementById('editBrkThreshold').value = b.threshold;
+  document.getElementById('editBrkActionType').value = b.actionType;
+  document.getElementById('editBrkTarget').value = b.actionTarget;
+  document.getElementById('modalEditBreaker').style.display = 'flex';
+};
+
+window.deleteBreaker = async (ruleId) => {
+  if (!confirm(`¿Eliminar de forma permanente el disyuntor '${ruleId}'?`)) return;
+  try {
+    const res = await fetch(`/api/libellas/${currentLibellaId}/breakers/${ruleId}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadBreakers();
+    }
+  } catch (err) {
+    alert('Error al eliminar breaker: ' + err.message);
+  }
+};
 
 document.getElementById('btnEvalBreakers').addEventListener('click', async () => {
   try {
@@ -339,7 +432,57 @@ document.getElementById('btnEvalBreakers').addEventListener('click', async () =>
 });
 
 // -------------------------------------------------------------
-// 5. Ingest Simulator (Live Click & Test)
+// 5. Quadrant: Lenses (Ommatidia Engine Full CRUD)
+// -------------------------------------------------------------
+async function loadMountedLenses() {
+  try {
+    const res = await fetch(`/api/libellas/${currentLibellaId}/lenses`);
+    if (res.ok) {
+      const lenses = await res.json();
+      const container = document.getElementById('mountedLensesList');
+      if (!lenses || lenses.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-gray); font-size:0.85rem; padding:0.5rem 0;">No hay lentes montadas en este Watchtower.</div>';
+        return;
+      }
+      container.innerHTML = lenses.map((l) => `
+        <div style="background:var(--bg-surface); border:1px solid var(--primary-border); padding:0.75rem 1rem; border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700; color:#fff; font-size:0.92rem;">
+              ${escapeHtml(l.name)} 
+              <span style="font-size:0.75rem; color:var(--primary); font-family:var(--font-mono); font-weight:normal; margin-left:0.4rem;">[${l.type.toUpperCase()}]</span>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-gray); font-family:var(--font-mono); margin-top:0.15rem;">ID: ${l.id}</div>
+          </div>
+          <div style="display:flex; gap:0.4rem;">
+            <button class="btn btn-ghost btn-sm" onclick="openEditLensModal('${l.id}', '${escapeHtml(l.name)}')" title="Editar">✏️</button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteLens('${l.id}')" title="Desmontar" style="color:var(--danger);">🗑️</button>
+          </div>
+        </div>
+      `).join('');
+    }
+  } catch {}
+}
+
+window.openEditLensModal = (lensId, name) => {
+  document.getElementById('editLensId').value = lensId;
+  document.getElementById('editLensName').value = name;
+  document.getElementById('modalEditLens').style.display = 'flex';
+};
+
+window.deleteLens = async (lensId) => {
+  if (!confirm(`¿Desmontar y eliminar la lente '${lensId}' de este Watchtower?`)) return;
+  try {
+    const res = await fetch(`/api/libellas/${currentLibellaId}/lenses/${lensId}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadMountedLenses();
+    }
+  } catch (err) {
+    alert('Error al desmontar lente: ' + err.message);
+  }
+};
+
+// -------------------------------------------------------------
+// 6. Ingest Simulator (Live Click & Test)
 // -------------------------------------------------------------
 function setupSimulator() {
   const send = async (lensType, payload) => {
@@ -358,14 +501,14 @@ function setupSimulator() {
     } catch {}
   };
 
-  document.getElementById('simVercel').addEventListener('click', () => {
+  document.getElementById('simVercel')?.addEventListener('click', () => {
     send('vercel', {
       proxy: { statusCode: 200, duration: 118 + Math.floor(Math.random() * 20), path: '/api/v1/users' },
       message: 'Vercel Serverless Function Executed Successfully',
     });
   });
 
-  document.getElementById('simOpenAi').addEventListener('click', () => {
+  document.getElementById('simOpenAi')?.addEventListener('click', () => {
     send('ai', {
       provider: 'openai',
       model: 'gpt-4o',
@@ -375,7 +518,7 @@ function setupSimulator() {
     });
   });
 
-  document.getElementById('simClaude').addEventListener('click', () => {
+  document.getElementById('simClaude')?.addEventListener('click', () => {
     send('ai', {
       provider: 'anthropic',
       model: 'claude-3-5-sonnet',
@@ -385,7 +528,7 @@ function setupSimulator() {
     });
   });
 
-  document.getElementById('simUpstash').addEventListener('click', () => {
+  document.getElementById('simUpstash')?.addEventListener('click', () => {
     send('upstash', {
       commands: 450,
       memoryUsageBytes: 1024 * 1024 * 12,
@@ -393,7 +536,7 @@ function setupSimulator() {
     });
   });
 
-  document.getElementById('simSpike').addEventListener('click', () => {
+  document.getElementById('simSpike')?.addEventListener('click', () => {
     send('byol', {
       name: 'database_query_duration_ms',
       value: 2850,
@@ -402,7 +545,7 @@ function setupSimulator() {
     });
   });
 
-  document.getElementById('simFatal').addEventListener('click', () => {
+  document.getElementById('simFatal')?.addEventListener('click', () => {
     send('byol', {
       level: 'fatal',
       message: 'CRITICAL [FATAL 500]: Database connection pool exhausted',
@@ -412,7 +555,7 @@ function setupSimulator() {
 }
 
 // -------------------------------------------------------------
-// 6. Config Watchtower & Modals
+// 7. Config Watchtower & Modals
 // -------------------------------------------------------------
 function updateConfigTab() {
   const current = activeLibellas.find((w) => w.id === currentLibellaId);
@@ -436,22 +579,70 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });`
   document.getElementById('codeSnippetNode').innerText = nodeSnippet;
 }
 
-document.getElementById('btnCopyKey').addEventListener('click', () => {
+document.getElementById('btnCopyKey')?.addEventListener('click', () => {
   const key = document.getElementById('cfgKey').value;
   navigator.clipboard.writeText(key);
   alert('Ingest Key copiada al portapapeles');
 });
 
+// Watchtower Top Controls (Edit & Delete)
+document.getElementById('btnEditWatchtower')?.addEventListener('click', () => {
+  const current = activeLibellas.find((w) => w.id === currentLibellaId);
+  if (!current) return;
+  document.getElementById('editWName').value = current.name;
+  document.getElementById('editWBudget').value = current.budgetUsdMonthly || 50;
+  document.getElementById('modalEditWatchtower').style.display = 'flex';
+});
+
+document.getElementById('btnCancelEditW')?.addEventListener('click', () => {
+  document.getElementById('modalEditWatchtower').style.display = 'none';
+});
+
+document.getElementById('btnSaveEditW')?.addEventListener('click', async () => {
+  const name = document.getElementById('editWName').value.trim();
+  const budget = Number(document.getElementById('editWBudget').value);
+  if (!name) return alert('Especifica un nombre');
+
+  try {
+    const res = await fetch(`/api/libellas/${currentLibellaId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, budgetUsdMonthly: budget }),
+    });
+    if (res.ok) {
+      document.getElementById('modalEditWatchtower').style.display = 'none';
+      await loadWatchtowers();
+      refreshAll();
+    }
+  } catch (err) {
+    alert('Error al actualizar Watchtower: ' + err.message);
+  }
+});
+
+document.getElementById('btnDeleteWatchtower')?.addEventListener('click', async () => {
+  if (!confirm(`¿Eliminar Watchtower '${currentLibellaId}' y toda su configuración asociada?`)) return;
+  try {
+    const res = await fetch(`/api/libellas/${currentLibellaId}`, { method: 'DELETE' });
+    if (res.ok) {
+      currentLibellaId = 'default';
+      await loadWatchtowers();
+      refreshAll();
+    }
+  } catch (err) {
+    alert('Error al eliminar Watchtower: ' + err.message);
+  }
+});
+
 function setupModals() {
-  // Watchtower Modal
+  // New Watchtower Modal
   const mWatchtower = document.getElementById('modalNewWatchtower');
-  document.getElementById('btnNewWatchtower').addEventListener('click', () => {
+  document.getElementById('btnNewWatchtower')?.addEventListener('click', () => {
     mWatchtower.style.display = 'flex';
   });
-  document.getElementById('btnCancelNewW').addEventListener('click', () => {
+  document.getElementById('btnCancelNewW')?.addEventListener('click', () => {
     mWatchtower.style.display = 'none';
   });
-  document.getElementById('btnSaveNewW').addEventListener('click', async () => {
+  document.getElementById('btnSaveNewW')?.addEventListener('click', async () => {
     const name = document.getElementById('newWName').value.trim();
     const budget = Number(document.getElementById('newWBudget').value) || 50;
     if (!name) return alert('Especifica un nombre');
@@ -470,15 +661,63 @@ function setupModals() {
     } catch {}
   });
 
-  // Breaker Modal
+  // Mount Lens Modal
+  const mMountLens = document.getElementById('modalMountLens');
+  document.getElementById('btnMountLens')?.addEventListener('click', () => {
+    mMountLens.style.display = 'flex';
+  });
+  document.getElementById('btnCancelMountLens')?.addEventListener('click', () => {
+    mMountLens.style.display = 'none';
+  });
+  document.getElementById('btnSaveMountLens')?.addEventListener('click', async () => {
+    const type = document.getElementById('mountLensType').value;
+    const name = document.getElementById('mountLensName').value.trim() || `${type.toUpperCase()} Lens`;
+
+    try {
+      const res = await fetch(`/api/libellas/${currentLibellaId}/lenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, name }),
+      });
+      if (res.ok) {
+        mMountLens.style.display = 'none';
+        await loadMountedLenses();
+      }
+    } catch {}
+  });
+
+  // Edit Lens Modal
+  const mEditLens = document.getElementById('modalEditLens');
+  document.getElementById('btnCancelEditLens')?.addEventListener('click', () => {
+    mEditLens.style.display = 'none';
+  });
+  document.getElementById('btnSaveEditLens')?.addEventListener('click', async () => {
+    const lensId = document.getElementById('editLensId').value;
+    const name = document.getElementById('editLensName').value.trim();
+    if (!name) return alert('Especifica un nombre');
+
+    try {
+      const res = await fetch(`/api/libellas/${currentLibellaId}/lenses/${lensId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        mEditLens.style.display = 'none';
+        await loadMountedLenses();
+      }
+    } catch {}
+  });
+
+  // New Breaker Modal
   const mBreaker = document.getElementById('modalNewBreaker');
-  document.getElementById('btnNewBreaker').addEventListener('click', () => {
+  document.getElementById('btnNewBreaker')?.addEventListener('click', () => {
     mBreaker.style.display = 'flex';
   });
-  document.getElementById('btnCancelBrk').addEventListener('click', () => {
+  document.getElementById('btnCancelBrk')?.addEventListener('click', () => {
     mBreaker.style.display = 'none';
   });
-  document.getElementById('btnSaveBrk').addEventListener('click', async () => {
+  document.getElementById('btnSaveBrk')?.addEventListener('click', async () => {
     const name = document.getElementById('brkName').value.trim();
     const metric = document.getElementById('brkMetric').value;
     const threshold = Number(document.getElementById('brkThreshold').value);
@@ -506,10 +745,140 @@ function setupModals() {
       }
     } catch {}
   });
+
+  // Edit Breaker Modal
+  const mEditBrk = document.getElementById('modalEditBreaker');
+  document.getElementById('btnCancelEditBrk')?.addEventListener('click', () => {
+    mEditBrk.style.display = 'none';
+  });
+  document.getElementById('btnSaveEditBrk')?.addEventListener('click', async () => {
+    const ruleId = document.getElementById('editBrkId').value;
+    const name = document.getElementById('editBrkName').value.trim();
+    const metric = document.getElementById('editBrkMetric').value;
+    const threshold = Number(document.getElementById('editBrkThreshold').value);
+    const actionType = document.getElementById('editBrkActionType').value;
+    const actionTarget = document.getElementById('editBrkTarget').value.trim();
+
+    try {
+      const res = await fetch(`/api/libellas/${currentLibellaId}/breakers/${ruleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          metric,
+          op: '>',
+          threshold,
+          actionType,
+          actionTarget,
+        }),
+      });
+      if (res.ok) {
+        mEditBrk.style.display = 'none';
+        await loadBreakers();
+      }
+    } catch {}
+  });
+
+  // Custom AI Model Modal
+  const mAi = document.getElementById('modalNewAiModel');
+  document.getElementById('btnNewAiModel')?.addEventListener('click', () => {
+    mAi.style.display = 'flex';
+  });
+  document.getElementById('btnCancelAiModel')?.addEventListener('click', () => {
+    mAi.style.display = 'none';
+  });
+  document.getElementById('btnSaveAiModel')?.addEventListener('click', async () => {
+    const model = document.getElementById('aiModelName').value.trim();
+    const inPrice = Number(document.getElementById('aiModelInputPrice').value);
+    const outPrice = Number(document.getElementById('aiModelOutputPrice').value);
+    if (!model) return alert('Especifica el nombre del modelo');
+
+    try {
+      const res = await fetch(`/api/libellas/${currentLibellaId}/ai-models`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, inputPricePer1M: inPrice, outputPricePer1M: outPrice }),
+      });
+      if (res.ok) {
+        mAi.style.display = 'none';
+        await loadFinOps();
+        alert(`Modelo '${model}' configurado ($${inPrice} / $${outPrice} por 1M)`);
+      }
+    } catch {}
+  });
+
+  // New Incident Modal
+  const mInc = document.getElementById('modalNewIncident');
+  document.getElementById('btnNewIncident')?.addEventListener('click', () => {
+    mInc.style.display = 'flex';
+  });
+  document.getElementById('btnCancelIncident')?.addEventListener('click', () => {
+    mInc.style.display = 'none';
+  });
+  document.getElementById('btnSaveIncident')?.addEventListener('click', async () => {
+    const title = document.getElementById('incTitle').value.trim();
+    const severity = document.getElementById('incSeverity').value;
+    const message = document.getElementById('incMessage').value.trim();
+    if (!title) return alert('Especifica un título');
+
+    try {
+      const res = await fetch(`/api/libellas/${currentLibellaId}/incidents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, severity, message }),
+      });
+      if (res.ok) {
+        mInc.style.display = 'none';
+        await loadIncidents();
+      }
+    } catch {}
+  });
+
+  // Resolve Incident Modal
+  const mResolveInc = document.getElementById('modalResolveIncident');
+  document.getElementById('btnCancelResolveInc')?.addEventListener('click', () => {
+    mResolveInc.style.display = 'none';
+  });
+  document.getElementById('btnConfirmResolveInc')?.addEventListener('click', async () => {
+    const incId = document.getElementById('resolveIncId').value;
+    const message = document.getElementById('resolveIncMsg').value.trim();
+
+    try {
+      const res = await fetch(`/api/libellas/${currentLibellaId}/incidents/${incId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      if (res.ok) {
+        mResolveInc.style.display = 'none';
+        await loadIncidents();
+      }
+    } catch {}
+  });
+
+  // Vault Settings Modal
+  const mVault = document.getElementById('modalVaultConfig');
+  document.getElementById('btnVaultConfig')?.addEventListener('click', () => {
+    document.getElementById('vaultPat').value = localStorage.getItem('libella_vault_pat') || '';
+    document.getElementById('vaultRepo').value = localStorage.getItem('libella_vault_repo') || '';
+    mVault.style.display = 'flex';
+  });
+  document.getElementById('btnCancelVault')?.addEventListener('click', () => {
+    mVault.style.display = 'none';
+  });
+  document.getElementById('btnSaveVault')?.addEventListener('click', () => {
+    const pat = document.getElementById('vaultPat').value.trim();
+    const repo = document.getElementById('vaultRepo').value.trim();
+    if (pat) localStorage.setItem('libella_vault_pat', pat);
+    if (repo) localStorage.setItem('libella_vault_repo', repo);
+    mVault.style.display = 'none';
+    alert('Configuración de GitHub Storage Vault guardada.');
+  });
 }
 
 function escapeHtml(str) {
-  return str
+  if (!str) return '';
+  return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');

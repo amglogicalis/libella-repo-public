@@ -134,6 +134,38 @@
       document.getElementById('snapSuccessRate').innerText = successRate + '%';
 
       renderUptimeBar(data.uptimePercent30d);
+
+      // Render Incidents
+      const incList = document.getElementById('incidentsList');
+      const incCount = document.getElementById('incidentsCount');
+      const activeInc = data.activeIncidents || [];
+      incCount.innerText = `${activeInc.length} activos`;
+      if (activeInc.length === 0) {
+        incList.innerHTML = '<div style="color:var(--text-gray); text-align:center; padding:1.5rem;">No se han detectado anomalías ni incidentes en los últimos 30 días.</div>';
+      } else {
+        incList.innerHTML = activeInc.map((inc) => {
+          const sevColor = inc.severity === 'critical' ? 'var(--danger)' : inc.severity === 'major' ? 'var(--warning)' : '#38bdf8';
+          const dt = inc.timestamp ? inc.timestamp.slice(0, 19).replace('T', ' ') : 'Reciente';
+          return `
+            <div class="incident-card" style="border-left: 4px solid ${sevColor};">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="color:#fff;">${escapeHtml(inc.title)}</strong>
+                <span class="badge" style="background:${sevColor}; color:#000;">${inc.severity.toUpperCase()}</span>
+              </div>
+              <p style="color:var(--text-muted); font-size:0.86rem; margin-top:0.4rem;">${escapeHtml(inc.message || '')}</p>
+              <div style="font-size:0.75rem; color:var(--text-gray); margin-top:0.4rem;">Reportado: ${dt}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
     }
 
     function renderFallback(libellaId) {
