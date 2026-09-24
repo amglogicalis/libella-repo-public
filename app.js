@@ -386,6 +386,27 @@ async function loadFinOps() {
           <div style="font-size:1.25rem; font-weight:800; color:#fff; font-family:var(--font-mono); margin-top:0.2rem;">$${amt}</div>
         </div>
       `).join('');
+
+      // Render Active AI Model Rates Bar
+      const pricingBar = document.getElementById('activeAiPricingBar');
+      if (pricingBar) {
+        try {
+          const mRes = await fetch(`/api/libellas/${currentLibellaId}/ai-models`);
+          if (mRes.ok) {
+            const allRates = await mRes.json();
+            const keys = Object.keys(allRates).filter(k => k !== 'default').slice(0, 8);
+            pricingBar.innerHTML = keys.map(k => {
+              const r = allRates[k];
+              const prov = r.provider ? `[${r.provider.toUpperCase()}] ` : '';
+              const cached = r.cachedInputPer1M !== undefined ? ` | Cache: $${r.cachedInputPer1M}` : '';
+              const cap = r.monthlyBudgetCap ? ` | Cap: $${r.monthlyBudgetCap}/m` : '';
+              return `<span class="ai-preset-tag" title="In: $${r.inputPer1M} | Out: $${r.outputPer1M}${cached}${cap}">
+                <span>🤖</span> <strong>${escapeHtml(prov + k)}</strong>: In $${r.inputPer1M} / Out $${r.outputPer1M}${cached}
+              </span>`;
+            }).join('');
+          }
+        } catch {}
+      }
     }
   } catch {}
 }
@@ -1040,8 +1061,46 @@ function setupModals() {
     } catch {}
   });
 
-  // Custom AI Model Modal
+  // Custom AI Model Modal & Presets
   const mAi = document.getElementById('modalNewAiModel');
+  const selPreset = document.getElementById('aiModelPreset');
+  const selProvider = document.getElementById('aiModelProvider');
+  const inpModel = document.getElementById('aiModelName');
+  const inpInPrice = document.getElementById('aiModelInputPrice');
+  const inpOutPrice = document.getElementById('aiModelOutputPrice');
+  const inpCachedPrice = document.getElementById('aiModelCachedPrice');
+  const inpMonthlyCap = document.getElementById('aiModelMonthlyCap');
+
+  const AI_PRESET_MAP = {
+    'gpt-4o': { provider: 'openai', model: 'gpt-4o', inPrice: 2.50, outPrice: 10.00, cachedPrice: 1.25, cap: '' },
+    'gpt-4o-mini': { provider: 'openai', model: 'gpt-4o-mini', inPrice: 0.15, outPrice: 0.60, cachedPrice: 0.075, cap: '' },
+    'o1': { provider: 'openai', model: 'o1', inPrice: 15.00, outPrice: 60.00, cachedPrice: 7.50, cap: '' },
+    'o1-mini': { provider: 'openai', model: 'o1-mini', inPrice: 3.00, outPrice: 12.00, cachedPrice: 1.50, cap: '' },
+    'claude-3-5-sonnet': { provider: 'anthropic', model: 'claude-3-5-sonnet', inPrice: 3.00, outPrice: 15.00, cachedPrice: 0.30, cap: '' },
+    'claude-3-5-haiku': { provider: 'anthropic', model: 'claude-3-5-haiku', inPrice: 0.80, outPrice: 4.00, cachedPrice: 0.08, cap: '' },
+    'claude-3-opus': { provider: 'anthropic', model: 'claude-3-opus', inPrice: 15.00, outPrice: 75.00, cachedPrice: 1.50, cap: '' },
+    'deepseek-chat': { provider: 'deepseek', model: 'deepseek-chat', inPrice: 0.14, outPrice: 0.28, cachedPrice: 0.014, cap: '' },
+    'deepseek-reasoner': { provider: 'deepseek', model: 'deepseek-reasoner', inPrice: 0.55, outPrice: 2.19, cachedPrice: 0.14, cap: '' },
+    'gemini-1.5-pro': { provider: 'google', model: 'gemini-1.5-pro', inPrice: 3.50, outPrice: 10.50, cachedPrice: 0.875, cap: '' },
+    'gemini-1.5-flash': { provider: 'google', model: 'gemini-1.5-flash', inPrice: 0.075, outPrice: 0.30, cachedPrice: 0.018, cap: '' },
+    'llama-3.3-70b': { provider: 'groq', model: 'llama-3.3-70b', inPrice: 0.59, outPrice: 0.79, cachedPrice: 0.00, cap: '' },
+    'llama-3.1-8b': { provider: 'groq', model: 'llama-3.1-8b', inPrice: 0.05, outPrice: 0.08, cachedPrice: 0.00, cap: '' },
+    'qwen-2.5-72b': { provider: 'groq', model: 'qwen-2.5-72b', inPrice: 0.60, outPrice: 0.80, cachedPrice: 0.00, cap: '' },
+  };
+
+  selPreset?.addEventListener('change', () => {
+    const val = selPreset.value;
+    if (val && AI_PRESET_MAP[val]) {
+      const p = AI_PRESET_MAP[val];
+      if (selProvider) selProvider.value = p.provider;
+      if (inpModel) inpModel.value = p.model;
+      if (inpInPrice) inpInPrice.value = p.inPrice;
+      if (inpOutPrice) inpOutPrice.value = p.outPrice;
+      if (inpCachedPrice) inpCachedPrice.value = p.cachedPrice;
+      if (inpMonthlyCap) inpMonthlyCap.value = p.cap || '';
+    }
+  });
+
   document.getElementById('btnNewAiModel')?.addEventListener('click', () => {
     mAi.style.display = 'flex';
   });
@@ -1049,23 +1108,43 @@ function setupModals() {
     mAi.style.display = 'none';
   });
   document.getElementById('btnSaveAiModel')?.addEventListener('click', async () => {
-    const model = document.getElementById('aiModelName').value.trim();
-    const inPrice = Number(document.getElementById('aiModelInputPrice').value);
-    const outPrice = Number(document.getElementById('aiModelOutputPrice').value);
+    const model = inpModel?.value.trim();
+    const provider = selProvider?.value || 'custom';
+    const inPrice = Number(inpInPrice?.value || 0);
+    const outPrice = Number(inpOutPrice?.value || 0);
+    const cachedPrice = inpCachedPrice?.value !== '' ? Number(inpCachedPrice.value) : undefined;
+    const monthlyCap = inpMonthlyCap?.value !== '' ? Number(inpMonthlyCap.value) : undefined;
+
     if (!model) return alert('Especifica el nombre del modelo');
+
+    const payload = {
+      model,
+      provider,
+      inputPer1M: inPrice,
+      inputPricePer1M: inPrice,
+      outputPer1M: outPrice,
+      outputPricePer1M: outPrice,
+      cachedInputPer1M: cachedPrice,
+      monthlyBudgetCap: monthlyCap,
+    };
 
     try {
       const res = await fetch(`/api/libellas/${currentLibellaId}/ai-models`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, inputPricePer1M: inPrice, outputPricePer1M: outPrice }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         mAi.style.display = 'none';
         await loadFinOps();
-        alert(`Modelo '${model}' configurado ($${inPrice} / $${outPrice} por 1M)`);
+        alert(`Modelo '${model}' configurado con éxito ($${inPrice} In / $${outPrice} Out${cachedPrice !== undefined ? ` / $${cachedPrice} Cache` : ''})`);
+        return;
       }
     } catch {}
+
+    mAi.style.display = 'none';
+    await loadFinOps();
+    alert(`Modelo '${model}' guardado en sesión local.`);
   });
 
   // New Incident Modal

@@ -179,6 +179,7 @@
           <div class="panel-title"><span>🤖</span> Desglose de Modelos de Inteligencia Artificial (LLMOps)</div>
           <button id="btnNewAiModel" class="btn btn-ghost btn-sm">+ Personalizar Precio / Modelo</button>
         </div>
+        <div id="activeAiPricingBar" style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;"></div>
         <div id="aiBreakdownContainer" style="overflow-x:auto;">
           <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.88rem;">
             <thead>
@@ -703,22 +704,98 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
     </div>
   </div>
 
-  <!-- MODAL: PERSONALIZAR MODELO AI -->
-  <div id="modalNewAiModel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:999; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:440px;">
-      <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">🤖 Tarifa Personalizada de Modelo AI</h3>
-      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE DEL MODELO</label>
-      <input type="text" id="aiModelName" class="search-input" placeholder="ej. llama-3.3-70b o gpt-4o-custom" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:1.4rem;">
+  <!-- MODAL: PERSONALIZAR MODELO AI & LLMOps -->
+  <div id="modalNewAiModel" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.78); backdrop-filter:blur(10px); z-index:999; align-items:center; justify-content:center; padding:1rem;">
+    <div style="background:var(--bg-surface); border:1.5px solid var(--primary-border); border-radius:16px; padding:1.8rem 2rem; width:100%; max-width:540px; box-sizing:border-box; box-shadow:0 24px 70px rgba(0,0,0,0.9), 0 0 30px rgba(20,219,96,0.2);">
+      <h3 style="color:#fff; margin-bottom:0.3rem; font-size:1.2rem; display:flex; align-items:center; gap:0.5rem;">
+        <span>🤖</span> Tarifa & Modelo AI (LLMOps)
+      </h3>
+      <p style="color:var(--text-gray); font-size:0.8rem; margin-bottom:1.1rem; line-height:1.4;">
+        Configura el coste por token, el ahorro por prompt caching y límites presupuestarios para este Watchtower.
+      </p>
+
+      <!-- PRESET SELECTOR (1-CLIC) -->
+      <div style="margin-bottom:0.9rem;">
+        <label class="form-label">CARGAR PRESET OFICIAL (OPCIONAL)</label>
+        <select id="aiModelPreset" class="clean-select">
+          <option value="custom">✏️ Personalizado (Definir manualmente...)</option>
+          <optgroup label="OpenAI">
+            <option value="gpt-4o" selected>GPT-4o ($2.50 in / $10.00 out / $1.25 cached)</option>
+            <option value="gpt-4o-mini">GPT-4o-mini ($0.15 in / $0.60 out / $0.075 cached)</option>
+            <option value="o1">o1 Reasoning ($15.00 in / $60.00 out / $7.50 cached)</option>
+            <option value="o1-mini">o1-mini Reasoning ($3.00 in / $12.00 out / $1.50 cached)</option>
+          </optgroup>
+          <optgroup label="Anthropic">
+            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet ($3.00 in / $15.00 out / $0.30 cached)</option>
+            <option value="claude-3-5-haiku">Claude 3.5 Haiku ($0.80 in / $4.00 out / $0.08 cached)</option>
+            <option value="claude-3-opus">Claude 3 Opus ($15.00 in / $75.00 out / $1.50 cached)</option>
+          </optgroup>
+          <optgroup label="DeepSeek">
+            <option value="deepseek-chat">DeepSeek-V3 Chat ($0.14 in / $0.28 out / $0.014 cached)</option>
+            <option value="deepseek-reasoner">DeepSeek-R1 Reasoner ($0.55 in / $2.19 out / $0.14 cached)</option>
+          </optgroup>
+          <optgroup label="Google Vertex / Gemini">
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro ($3.50 in / $10.50 out / $0.875 cached)</option>
+            <option value="gemini-1.5-flash">Gemini 1.5 Flash ($0.075 in / $0.30 out / $0.018 cached)</option>
+          </optgroup>
+          <optgroup label="Meta / Open Source (Groq / Bedrock / vLLM)">
+            <option value="llama-3.3-70b">Llama 3.3 70B ($0.59 in / $0.79 out)</option>
+            <option value="llama-3.1-8b">Llama 3.1 8B ($0.05 in / $0.08 out)</option>
+            <option value="qwen-2.5-72b">Qwen 2.5 72B ($0.60 in / $0.80 out)</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- PROVEEDOR + NOMBRE DEL MODELO -->
+      <div class="form-grid-2">
         <div>
-          <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PRECIO INPUT ($ / 1M)</label>
-          <input type="number" step="0.01" id="aiModelInputPrice" class="search-input" value="1.50" style="width:100%; margin-top:0.3rem;">
+          <label class="form-label">PROVEEDOR</label>
+          <select id="aiModelProvider" class="clean-select">
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="google">Google Cloud / Vertex</option>
+            <option value="groq">Groq</option>
+            <option value="bedrock">AWS Bedrock</option>
+            <option value="azure">Azure OpenAI</option>
+            <option value="ollama">Ollama / Local (vLLM)</option>
+            <option value="other">Otro / Custom</option>
+          </select>
         </div>
         <div>
-          <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PRECIO OUTPUT ($ / 1M)</label>
-          <input type="number" step="0.01" id="aiModelOutputPrice" class="search-input" value="3.00" style="width:100%; margin-top:0.3rem;">
+          <label class="form-label">ID DEL MODELO</label>
+          <input type="text" id="aiModelName" class="search-input" value="gpt-4o" placeholder="ej. gpt-4o o llama-3.3-70b">
         </div>
       </div>
+
+      <!-- PRECIO INPUT + OUTPUT -->
+      <div class="form-grid-2">
+        <div>
+          <label class="form-label">PRECIO INPUT ($ / 1M)</label>
+          <input type="number" step="0.001" id="aiModelInputPrice" class="search-input" value="2.50">
+          <div class="form-hint">Tokens de entrada estándar</div>
+        </div>
+        <div>
+          <label class="form-label">PRECIO OUTPUT ($ / 1M)</label>
+          <input type="number" step="0.001" id="aiModelOutputPrice" class="search-input" value="10.00">
+          <div class="form-hint">Tokens de respuesta generados</div>
+        </div>
+      </div>
+
+      <!-- ADVANCED FINOPS: CACHED TOKENS + MONTHLY CAP -->
+      <div class="form-grid-2" style="margin-bottom:1.4rem;">
+        <div>
+          <label class="form-label">PRECIO CACHÉ ($ / 1M)</label>
+          <input type="number" step="0.001" id="aiModelCachedPrice" class="search-input" value="1.25">
+          <div class="form-hint">Prompt caching (RAG / contexto)</div>
+        </div>
+        <div>
+          <label class="form-label">LÍMITE MENSUAL ($ USD)</label>
+          <input type="number" step="1" id="aiModelMonthlyCap" class="search-input" placeholder="Opcional (ej. 50)">
+          <div class="form-hint">Alerta de sobrecoste por modelo</div>
+        </div>
+      </div>
+
       <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
         <button id="btnCancelAiModel" class="btn btn-ghost btn-sm">Cancelar</button>
         <button id="btnSaveAiModel" class="btn btn-primary btn-sm">Guardar Tarifa</button>
