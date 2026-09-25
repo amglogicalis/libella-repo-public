@@ -999,26 +999,32 @@ async function loadBreakers() {
     const list = await VaultClient.listBreakers(currentLibellaId);
     allBreakers = list || [];
     const tbody = document.getElementById('breakersTableBody');
+    if (!tbody) return;
     if (allBreakers.length === 0) {
       tbody.innerHTML = '<tr><td colspan="8" style="padding:1rem;text-align:center;color:var(--text-gray);">No hay disyuntores activos</td></tr>';
       return;
     }
     tbody.innerHTML = allBreakers.map(b => {
       const isTripped = b.status === 'tripped';
-      const stBadge = isTripped
-        ? '<span class="badge badge-danger">DISPARADO</span>'
-        : '<span class="badge badge-success">CERRADO</span>';
+      const isEnabled = b.enabled !== false;
+      const stBadge = !isEnabled
+        ? '<span class="badge" style="background:rgba(100,116,139,0.2);color:#94a3b8;">PAUSADO</span>'
+        : isTripped
+          ? '<span class="badge badge-danger">DISPARADO</span>'
+          : '<span class="badge badge-success">CERRADO</span>';
       const last = b.lastTriggeredAt ? b.lastTriggeredAt.slice(11, 19) : 'Nunca';
       const win  = b.windowMinutes ? `${b.windowMinutes}m` : '60m';
+      const op   = b.op || '>';
       return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
         <td style="padding:0.6rem;">${stBadge}</td>
         <td style="padding:0.6rem;font-weight:600;color:#fff;">${escapeHtml(b.name)}</td>
-        <td style="padding:0.6rem;font-family:var(--font-mono);">${b.metric} ${b.op} ${b.threshold}</td>
+        <td style="padding:0.6rem;font-family:var(--font-mono);">${b.metric} ${op} ${b.threshold}</td>
         <td style="padding:0.6rem;color:var(--text-muted);">${win}</td>
         <td style="padding:0.6rem;text-transform:uppercase;">${b.actionType}</td>
         <td style="padding:0.6rem;color:var(--text-muted);font-size:0.8rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(b.actionTarget)}</td>
         <td style="padding:0.6rem;color:var(--text-gray);">${last}</td>
         <td style="padding:0.6rem;text-align:right;">
+          <button class="btn btn-ghost btn-sm" onclick="toggleBreaker('${b.id}', ${!isEnabled})" title="${isEnabled ? 'Pausar disyuntor' : 'Activar disyuntor'}">${isEnabled ? '⏸' : '▶'}</button>
           <button class="btn btn-ghost btn-sm" onclick="openEditBreakerModal('${b.id}')" title="Editar">✏️</button>
           <button class="btn btn-ghost btn-sm" onclick="deleteBreaker('${b.id}')" title="Eliminar" style="color:var(--danger);">🗑️</button>
         </td>
@@ -1027,12 +1033,24 @@ async function loadBreakers() {
   } catch {}
 }
 
+window.toggleBreaker = async (ruleId, newEnabled) => {
+  try {
+    await VaultClient.updateBreaker(currentLibellaId, ruleId, { enabled: newEnabled });
+    await loadBreakers();
+    toast(newEnabled ? 'Disyuntor activado' : 'Disyuntor pausado', 'info');
+  } catch (err) {
+    toast('Error: ' + err.message, 'error');
+  }
+};
+
 window.openEditBreakerModal = (ruleId) => {
   const b = allBreakers.find(r => r.id === ruleId);
   if (!b) return;
   document.getElementById('editBrkId').value        = b.id;
   document.getElementById('editBrkName').value      = b.name;
   document.getElementById('editBrkMetric').value    = b.metric;
+  const opEl = document.getElementById('editBrkOp');
+  if (opEl) opEl.value = b.op || '>';
   document.getElementById('editBrkThreshold').value = b.threshold;
   document.getElementById('editBrkActionType').value = b.actionType;
   document.getElementById('editBrkTarget').value    = b.actionTarget;
@@ -1513,14 +1531,16 @@ function setupModals() {
   document.getElementById('btnSaveBrk')?.addEventListener('click', async () => {
     const name        = document.getElementById('brkName').value.trim();
     const metric      = document.getElementById('brkMetric').value;
+    const op          = document.getElementById('brkOp')?.value || '>';
     const threshold   = Number(document.getElementById('brkThreshold').value);
     const actionType  = document.getElementById('brkActionType').value;
     const actionTarget = document.getElementById('brkTarget').value.trim();
     const windowMinutes = Number(document.getElementById('brkWindow').value) || 60;
     if (!name || !actionTarget) return toast('Completa todos los campos requeridos', 'warn');
     try {
-      await VaultClient.createBreaker(currentLibellaId, { name, metric, op: '>', threshold, actionType, actionTarget, windowMinutes });
+      await VaultClient.createBreaker(currentLibellaId, { name, metric, op, threshold, actionType, actionTarget, windowMinutes });
       mB.style.display = 'none';
+      document.getElementById('brkName').value = '';
       await loadBreakers();
       toast(`Breaker '${name}' creado`, 'success');
     } catch (err) { toast('Error: ' + err.message, 'error'); }
@@ -1533,12 +1553,13 @@ function setupModals() {
     const ruleId      = document.getElementById('editBrkId').value;
     const name        = document.getElementById('editBrkName').value.trim();
     const metric      = document.getElementById('editBrkMetric').value;
+    const op          = document.getElementById('editBrkOp')?.value || '>';
     const threshold   = Number(document.getElementById('editBrkThreshold').value);
     const actionType  = document.getElementById('editBrkActionType').value;
     const actionTarget = document.getElementById('editBrkTarget').value.trim();
     const windowMinutes = Number(document.getElementById('editBrkWindow').value) || 60;
     try {
-      await VaultClient.updateBreaker(currentLibellaId, ruleId, { name, metric, op: '>', threshold, actionType, actionTarget, windowMinutes });
+      await VaultClient.updateBreaker(currentLibellaId, ruleId, { name, metric, op, threshold, actionType, actionTarget, windowMinutes });
       mEB.style.display = 'none';
       await loadBreakers();
       toast('Breaker actualizado', 'success');

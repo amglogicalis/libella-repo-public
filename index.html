@@ -496,19 +496,30 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
       <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE DE LA REGLA</label>
       <input type="text" id="brkName" class="search-input" placeholder="ej. Fuga de Gasto OpenAI" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
       
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:0.8rem;">
+      <div style="display:grid; grid-template-columns:1.8fr 1fr 1fr; gap:0.6rem; margin-bottom:0.8rem;">
         <div>
           <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">MÉTRICA</label>
           <select id="brkMetric" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
             <option value="cost_daily_usd">Gasto Diario (USD)</option>
+            <option value="cost_monthly_usd">Gasto Mensual (USD)</option>
             <option value="error_rate_percent">Tasa de Error (%)</option>
             <option value="p95_latency_ms">Latencia p95 (ms)</option>
             <option value="error_count">Total de Errores</option>
           </select>
         </div>
         <div>
+          <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CONDICIÓN</label>
+          <select id="brkOp" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
+            <option value=">">&gt; (Mayor)</option>
+            <option value=">=">&gt;= (Mayor o igual)</option>
+            <option value="<">&lt; (Menor)</option>
+            <option value="<=">&lt;= (Menor o igual)</option>
+            <option value="==">== (Igual)</option>
+          </select>
+        </div>
+        <div>
           <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">UMBRAL</label>
-          <input type="number" id="brkThreshold" class="search-input" value="15" style="width:100%; margin-top:0.3rem;">
+          <input type="number" step="any" id="brkThreshold" class="search-input" value="15" style="width:100%; margin-top:0.3rem;">
         </div>
       </div>
 
@@ -820,19 +831,30 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
       <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE DE LA REGLA</label>
       <input type="text" id="editBrkName" class="search-input" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
       
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:0.8rem;">
+      <div style="display:grid; grid-template-columns:1.8fr 1fr 1fr; gap:0.6rem; margin-bottom:0.8rem;">
         <div>
           <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">MÉTRICA</label>
           <select id="editBrkMetric" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
             <option value="cost_daily_usd">Gasto Diario (USD)</option>
+            <option value="cost_monthly_usd">Gasto Mensual (USD)</option>
             <option value="error_rate_percent">Tasa de Error (%)</option>
             <option value="p95_latency_ms">Latencia p95 (ms)</option>
             <option value="error_count">Total de Errores</option>
           </select>
         </div>
         <div>
+          <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CONDICIÓN</label>
+          <select id="editBrkOp" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
+            <option value=">">&gt; (Mayor)</option>
+            <option value=">=">&gt;= (Mayor o igual)</option>
+            <option value="<">&lt; (Menor)</option>
+            <option value="<=">&lt;= (Menor o igual)</option>
+            <option value="==">== (Igual)</option>
+          </select>
+        </div>
+        <div>
           <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">UMBRAL</label>
-          <input type="number" id="editBrkThreshold" class="search-input" style="width:100%; margin-top:0.3rem;">
+          <input type="number" step="any" id="editBrkThreshold" class="search-input" style="width:100%; margin-top:0.3rem;">
         </div>
       </div>
 
