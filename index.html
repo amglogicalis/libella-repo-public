@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -177,7 +177,10 @@
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title"><span>🤖</span> Desglose de Modelos de Inteligencia Artificial (LLMOps)</div>
-          <button id="btnNewAiModel" class="btn btn-ghost btn-sm">+ Personalizar Precio / Modelo</button>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+            <button id="btnOpenEnvModal" class="btn btn-primary btn-sm">📋 Inyectar / Copiar .env</button>
+            <button id="btnNewAiModel" class="btn btn-ghost btn-sm">+ Personalizar Precio / Modelo</button>
+          </div>
         </div>
         <div id="activeAiPricingBar" style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;"></div>
         <div id="aiBreakdownContainer" style="overflow-x:auto;">
@@ -194,6 +197,37 @@
               <tr><td colspan="4" style="padding:1rem; text-align:center; color:var(--text-gray);">Sin eventos de IA registrados</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- AI GATEWAY UNIVERSAL ($0 ZERO-CODE MULTI-PROVIDER PROXY) -->
+      <div class="panel" style="border:1px solid rgba(20,219,96,0.3); background:rgba(6,18,10,0.6);">
+        <div class="panel-header">
+          <div class="panel-title" style="display:flex; align-items:center;">
+            <span>🛸</span> AI Gateway Universal ($0 Zero-Code Proxy)
+            <span id="gwBadge" class="badge" style="margin-left:0.6rem; font-size:0.72rem; background:#1a2e1d; color:#14db60; border:1px solid #14db60;">⚪ INACTIVO</span>
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <button id="btnDispatchRemoteGw" class="btn btn-ghost btn-sm">🚀 Iniciar Gateway Remoto $0 (Actions)</button>
+            <button id="btnCopyGwUrl" class="btn btn-primary btn-sm">Copiar URL Gateway</button>
+          </div>
+        </div>
+        <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.8rem; line-height:1.4;">
+          Redirige las llamadas de tus apps (OpenAI, Anthropic, OpenRouter, DeepSeek, Gemini, Antigravity) sin tocar código. Libella intercepta el uso de tokens y calcula costes en tiempo real con latencia cero.
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:0.8rem; margin-bottom:0.4rem;">
+          <div style="background:#020604; border:1px solid var(--primary-border); padding:0.6rem 0.8rem; border-radius:8px;">
+            <div style="font-size:0.7rem; color:var(--text-gray); text-transform:uppercase;">URL Endpoint Gateway</div>
+            <div id="gwEndpointDisplay" style="font-family:var(--font-mono); font-size:0.78rem; color:var(--primary); word-break:break-all; margin-top:0.2rem;">http://localhost:4578/v1</div>
+          </div>
+          <div style="background:#020604; border:1px solid var(--primary-border); padding:0.6rem 0.8rem; border-radius:8px;">
+            <div style="font-size:0.7rem; color:var(--text-gray); text-transform:uppercase;">Modo Operativo</div>
+            <div id="gwModeDisplay" style="font-size:0.82rem; font-weight:600; color:#fff; margin-top:0.2rem;">Local (Node.js) / Remoto ($0)</div>
+          </div>
+          <div style="background:#020604; border:1px solid var(--primary-border); padding:0.6rem 0.8rem; border-radius:8px;">
+            <div style="font-size:0.7rem; color:var(--text-gray); text-transform:uppercase;">Peticiones / Tokens</div>
+            <div id="gwStatsDisplay" style="font-size:0.82rem; font-weight:600; color:#fff; margin-top:0.2rem;">0 reqs / 0 tokens</div>
+          </div>
         </div>
       </div>
 
@@ -996,6 +1030,39 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
       <div class="auth-footer">
         <span class="pulse-indicator"></span>
         <span>Terra Ecosystem • $0 Cost Cloud • Zero Data Leak</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: INYECTAR / COPIAR .ENV -->
+  <div id="modalEnvSnippet" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(8px); z-index:999; align-items:center; justify-content:center;">
+    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:92%; max-width:640px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.9);">
+      <h3 style="color:#fff; margin-bottom:0.5rem; font-size:1.15rem; display:flex; align-items:center; gap:0.5rem;">
+        <span>📋</span> Configuración .env para tus Aplicaciones
+      </h3>
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.4;">
+        Pega estas variables en el archivo <code style="color:var(--primary); font-family:var(--font-mono);">.env</code> de tu app (Next.js, Express, Python, Vercel, etc.) para que todo tu consumo de IA sea monitorizado automáticamente a coste $0 sin tocar código.
+      </p>
+
+      <div style="display:flex; gap:1.2rem; margin-bottom:1rem; align-items:center; background:#020604; border:1px solid var(--primary-border); padding:0.6rem 0.9rem; border-radius:8px;">
+        <span style="font-size:0.75rem; color:var(--text-gray); font-weight:600; text-transform:uppercase;">Destino:</span>
+        <label style="font-size:0.82rem; color:#fff; cursor:pointer; display:flex; align-items:center; gap:0.35rem;">
+          <input type="radio" name="envTargetMode" value="local" checked style="accent-color:var(--primary);"> Local (localhost:4578)
+        </label>
+        <label style="font-size:0.82rem; color:#fff; cursor:pointer; display:flex; align-items:center; gap:0.35rem;">
+          <input type="radio" name="envTargetMode" value="remote" style="accent-color:var(--primary);"> Remoto ($0 GitHub Relay)
+        </label>
+      </div>
+
+      <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CONTENIDO PARA TU .ENV</label>
+      <pre id="envSnippetPre" style="background:#020604; border:1px solid var(--primary-border); border-radius:8px; padding:0.9rem; font-family:var(--font-mono); font-size:0.78rem; color:#a3e635; overflow-x:auto; white-space:pre-wrap; margin-top:0.3rem; margin-bottom:1.2rem;"></pre>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+        <span style="font-size:0.76rem; color:var(--text-gray);">O mediante CLI: <code style="color:var(--primary); font-family:var(--font-mono);">libella env --inject</code></span>
+        <div style="display:flex; gap:0.6rem;">
+          <button id="btnCloseEnvModal" class="btn btn-ghost btn-sm">Cerrar</button>
+          <button id="btnCopyEnvCode" class="btn btn-primary btn-sm">Copiar Variables</button>
+        </div>
       </div>
     </div>
   </div>

@@ -304,6 +304,30 @@ const VaultClient = (() => {
     await ghWrite(`vault/${libId}/events.json`, trimmed, `libella: ingest event to ${libId}`);
   }
 
+  async function ghDispatchRemoteGateway(ttlMinutes = 30) {
+    const repo = getRepo();
+    if (!repo) return false;
+    const pat = getPat();
+    if (!pat) return false;
+    try {
+      const res = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/libella-gateway.yml/dispatches`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${pat}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: { ttl_minutes: String(ttlMinutes), port: '4578' },
+        }),
+      });
+      return res.status === 204 || res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   // ── Compute vitals from raw events (pages mode only) ──
   function computeVitalsFromEvents(events) {
     const metrics = events.filter(e => e.type === 'metric');
@@ -511,6 +535,26 @@ const VaultClient = (() => {
     async removeAiModel(libId, model) {
       if (await detectMode()) return call('DELETE', `/api/libellas/${libId}/ai-models/${encodeURIComponent(model)}`);
       return ghRemoveAiModel(libId, model);
+    },
+    async getGatewayStatus() {
+      if (await detectMode()) {
+        return (await call('GET', '/api/gateway/status')) || (await call('GET', '/v1/status'));
+      }
+      return null;
+    },
+    async getGatewayInfo() {
+      if (await detectMode()) {
+        return await call('GET', '/api/gateway/info');
+      }
+      const data = await ghRead('gateway.json');
+      return data || null;
+    },
+    async dispatchRemoteGateway(ttlMinutes = 30) {
+      if (await detectMode()) {
+        const res = await call('POST', '/api/gateway/dispatch-remote', { ttlMinutes });
+        return res?.success || false;
+      }
+      return await ghDispatchRemoteGateway(ttlMinutes);
     },
     async ingest(libId, lensType, payload) {
       if (await detectMode()) {
@@ -886,7 +930,8 @@ async function loadFinOps() {
           </span>`;
         }).join('');
       } catch {}
-    }
+    // ── Update AI Gateway Panel ──
+    await updateGatewayCard();
   } catch {}
 }
 
@@ -1527,6 +1572,137 @@ function setupModals() {
       toast('Incidente resuelto', 'success');
     } catch (err) { toast('Error: ' + err.message, 'error'); }
   });
+
+  // ── AI Gateway & .env Modal ──
+  const mEnv = document.getElementById('modalEnvSnippet');
+  const envPre = document.getElementById('envSnippetPre');
+
+  async function renderEnvSnippet() {
+    const isRemote = document.querySelector('input[name="envTargetMode"]:checked')?.value === 'remote';
+    let gwUrl = 'http://localhost:4578/v1';
+
+    if (isRemote) {
+      const info = await VaultClient.getGatewayInfo();
+      if (info && info.url) {
+        gwUrl = info.url;
+      } else {
+        gwUrl = 'https://<tu-tunnel>.trycloudflare.com/v1';
+      }
+    }
+
+    const wt = watchtowers.find((w) => w.id === currentLibellaId) || watchtowers[0];
+    const wtId = wt?.id || 'default';
+    const ingKey = wt?.ingestKey || 'lbk_...';
+
+    const snippet = [
+      '# =======================================================',
+      '# 🛸 LIBELLA AI GATEWAY & TELEMETRY ($0 Zero-Code LLMOps)',
+      '# =======================================================',
+      `LIBELLA_WATCHTOWER_ID=${wtId}`,
+      `LIBELLA_INGEST_KEY=${ingKey}`,
+      `LIBELLA_AI_GATEWAY=${gwUrl}`,
+      '',
+      '# Drop-in SDK Overrides (OpenAI, Anthropic, OpenRouter, DeepSeek, Groq)',
+      `OPENAI_BASE_URL=${gwUrl}/openai`,
+      `ANTHROPIC_BASE_URL=${gwUrl}/anthropic`,
+      `OPENROUTER_BASE_URL=${gwUrl}/openrouter`,
+      `DEEPSEEK_BASE_URL=${gwUrl}/deepseek`,
+      `GROQ_BASE_URL=${gwUrl}/groq`,
+      '# =======================================================',
+    ].join('\n');
+
+    if (envPre) envPre.textContent = snippet;
+  }
+
+  document.getElementById('btnOpenEnvModal')?.addEventListener('click', async () => {
+    if (mEnv) mEnv.style.display = 'flex';
+    await renderEnvSnippet();
+  });
+
+  document.querySelectorAll('input[name="envTargetMode"]').forEach((radio) => {
+    radio.addEventListener('change', renderEnvSnippet);
+  });
+
+  document.getElementById('btnCloseEnvModal')?.addEventListener('click', () => {
+    if (mEnv) mEnv.style.display = 'none';
+  });
+
+  document.getElementById('btnCopyEnvCode')?.addEventListener('click', () => {
+    if (envPre) {
+      navigator.clipboard.writeText(envPre.textContent || '');
+      toast('Variables copiadas al portapapeles', 'copy');
+    }
+  });
+
+  document.getElementById('btnCopyGwUrl')?.addEventListener('click', () => {
+    const url =
+      document.getElementById('gwEndpointDisplay')?.textContent ||
+      'http://localhost:4578/v1';
+    navigator.clipboard.writeText(url);
+    toast('URL del Gateway copiada al portapapeles', 'copy');
+  });
+
+  document.getElementById('btnDispatchRemoteGw')?.addEventListener('click', async () => {
+    toast('Despachando Gateway Remoto en GitHub Actions...', 'info');
+    try {
+      const res = await VaultClient.dispatchRemoteGateway(30);
+      if (res) {
+        toast('Gateway Remoto despachado con éxito en GitHub Actions ($0)', 'success');
+        await updateGatewayCard();
+      } else {
+        toast('No se pudo despachar el runner de Actions. Comprueba tus permisos de PAT.', 'error');
+      }
+    } catch (e) {
+      toast('Error: ' + e.message, 'error');
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 14b. Update AI Gateway UI Card
+// ─────────────────────────────────────────────────────────────────────────────
+async function updateGatewayCard() {
+  const badge = document.getElementById('gwBadge');
+  const epDisplay = document.getElementById('gwEndpointDisplay');
+  const modeDisplay = document.getElementById('gwModeDisplay');
+  const statsDisplay = document.getElementById('gwStatsDisplay');
+
+  try {
+    const status = await VaultClient.getGatewayStatus();
+    const info = await VaultClient.getGatewayInfo();
+
+    if (status && status.active) {
+      if (badge) {
+        badge.textContent = '🟢 ACTIVO';
+        badge.style.background = '#0d2e1a';
+        badge.style.color = '#14db60';
+        badge.style.borderColor = '#14db60';
+      }
+      if (epDisplay) epDisplay.textContent = status.url || 'http://localhost:4578/v1';
+      if (modeDisplay) modeDisplay.textContent = status.mode === 'remote-actions' ? 'Remoto ($0 GitHub Actions)' : 'Local (Node.js)';
+      if (statsDisplay) statsDisplay.textContent = `${status.requestCount || 0} reqs / ${status.tokensProcessed || 0} tokens ($${(status.costTrackedUsd || 0).toFixed(4)})`;
+    } else if (info && info.active) {
+      if (badge) {
+        badge.textContent = '🟢 REMOTO ACTIVO';
+        badge.style.background = '#0d2e1a';
+        badge.style.color = '#14db60';
+        badge.style.borderColor = '#14db60';
+      }
+      if (epDisplay) epDisplay.textContent = info.url;
+      if (modeDisplay) modeDisplay.textContent = info.mode === 'remote-actions' ? 'Remoto (GitHub Relay)' : 'Local';
+      if (statsDisplay) statsDisplay.textContent = `${info.requestCount || 0} reqs procesadas`;
+    } else {
+      if (badge) {
+        badge.textContent = '⚪ INACTIVO';
+        badge.style.background = '#1a2e1d';
+        badge.style.color = '#9ca3af';
+        badge.style.borderColor = 'rgba(255,255,255,0.1)';
+      }
+      if (epDisplay) epDisplay.textContent = 'http://localhost:4578/v1';
+      if (modeDisplay) modeDisplay.textContent = 'Inactivo (ejecuta libella gateway)';
+      if (statsDisplay) statsDisplay.textContent = '0 reqs / 0 tokens';
+    }
+  } catch {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
