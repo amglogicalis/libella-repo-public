@@ -930,6 +930,7 @@ async function loadFinOps() {
           </span>`;
         }).join('');
       } catch {}
+    }
     // ── Update AI Gateway Panel ──
     await updateGatewayCard();
   } catch {}
