@@ -1454,18 +1454,22 @@ function updateConfigTab() {
   if (statusAccess) statusAccess.value = current.statusPageAccess || 'public';
 
   const openLink = document.getElementById('btnOpenStatusPage');
-  if (openLink) {
-    const slug = current.statusPageSlug || current.slug || current.id;
-    openLink.href = `status.html?id=${encodeURIComponent(slug)}`;
-  }
+  const updateStatusLink = () => {
+    if (openLink) {
+      const slugVal = slugEl?.value.trim() || current.statusPageSlug || current.slug || current.id;
+      openLink.href = `status.html?id=${encodeURIComponent(slugVal)}`;
+    }
+  };
+  updateStatusLink();
+  if (slugEl) slugEl.oninput = updateStatusLink;
 
-  // Dynamic snippet with real watchtower ID, environment and ingest key
-  const snippet = `import { Libella } from 'terra-libella';
+  const renderSnippet = (envVal) => {
+    const snippet = `import { Libella } from 'terra-libella';
 
 // Option 1 — Full SDK (Node.js / Edge runtime)
 const libella = new Libella({
   libellaId: '${current.id}',
-  environment: '${current.environment || 'production'}',
+  environment: '${envVal || 'production'}',
   vaultToken: process.env.GITHUB_PAT,
   storageRepo: '${localStorage.getItem('libella_vault_repo') || '<user>/.libella-storage'}',
 });
@@ -1490,7 +1494,12 @@ await libella.aiCost({
 // libella ingest --metric checkout_latency_ms 145 --libella ${current.id}
 // libella ingest --ai gpt-4o --input 500 --output 120 --libella ${current.id}`;
 
-  document.getElementById('codeSnippetNode').innerText = snippet;
+    const snippetNode = document.getElementById('codeSnippetNode');
+    if (snippetNode) snippetNode.innerText = snippet;
+  };
+
+  renderSnippet(envEl ? envEl.value : current.environment);
+  if (envEl) envEl.onchange = () => renderSnippet(envEl.value);
 }
 
 document.getElementById('btnCopyKey')?.addEventListener('click', () => {

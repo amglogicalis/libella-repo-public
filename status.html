@@ -101,6 +101,47 @@
         }
       } catch {}
 
+      // Direct GitHub / Pages Mode fallback
+      try {
+        const repo = localStorage.getItem('libella_vault_repo');
+        const pat = localStorage.getItem('libella_vault_pat');
+        if (repo && pat) {
+          const regRes = await fetch(`https://api.github.com/repos/${repo}/contents/registry.json`, {
+            headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github.v3.raw' }
+          });
+          if (regRes.ok) {
+            const list = await regRes.json();
+            const wt = list.find(w => w.statusPageSlug === libellaId || w.slug === libellaId || w.id === libellaId);
+            if (wt) {
+              const targetId = wt.id;
+              const today = new Date().toISOString().slice(0, 10);
+              const evRes = await fetch(`https://api.github.com/repos/${repo}/contents/events/${targetId}/${today}.json`, {
+                headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github.v3.raw' }
+              }).catch(() => null);
+              const events = evRes && evRes.ok ? await evRes.json() : [];
+              const metrics = events.filter(e => typeof e.value === 'number' || e.type === 'metric');
+              const latencies = metrics.map(e => Number(e.value) || 0).sort((a,b)=>a-b);
+              const avg = latencies.length ? Math.round(latencies.reduce((a,b)=>a+b,0)/latencies.length) : 0;
+              const p95 = latencies.length ? (latencies[Math.floor(latencies.length * 0.95)] || 0) : 0;
+              const errors = events.filter(e => e.level === 'error' || (e.statusCode && e.statusCode >= 500));
+              const errPct = metrics.length ? Math.round((errors.length / metrics.length) * 100) : 0;
+              renderStatus({
+                libellaId: targetId,
+                name: wt.name,
+                slug: wt.statusPageSlug || wt.slug || wt.id,
+                overallStatus: errPct > 20 ? 'outage' : (errPct > 5 || p95 > 2000 ? 'degraded' : 'operational'),
+                uptimePercent30d: 100,
+                statusPageEnabled: wt.statusPageEnabled !== false,
+                statusPageAccess: wt.statusPageAccess || 'public',
+                vitalsSnapshot: { avgLatencyMs: avg, p95LatencyMs: p95, errorRatePercent: errPct },
+                activeIncidents: []
+              });
+              return;
+            }
+          }
+        }
+      } catch {}
+
       // Fallback display
       renderFallback(libellaId);
     }
