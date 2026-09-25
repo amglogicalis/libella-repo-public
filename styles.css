@@ -122,6 +122,7 @@ header.topbar {
   border: 1px solid var(--primary-border);
   padding: 0.4rem 0.8rem;
   border-radius: var(--radius-sm);
+  flex-shrink: 0;
 }
 
 .watchtower-selector label {
@@ -129,6 +130,25 @@ header.topbar {
   color: var(--text-muted);
   font-weight: 600;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.watchtower-selector select,
+#rangeSelect {
+  width: auto !important;
+  max-width: 280px !important;
+  min-width: 180px !important;
+  cursor: pointer;
+  background: #05140a !important;
+  border: 1px solid var(--primary-border) !important;
+  color: #fff !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 0.35rem 0.65rem !important;
+}
+
+.watchtower-selector .btn {
+  flex-shrink: 0;
+  padding: 0.35rem 0.65rem;
 }
 
 select.clean-select {

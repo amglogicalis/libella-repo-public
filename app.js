@@ -126,10 +126,39 @@ const VaultClient = (() => {
     return true;
   }
 
-  /** GitHub REST: list watchtowers from registry.json */
+  /** GitHub REST: list watchtowers from registry.json or libellas/ */
   async function ghListWatchtowers() {
     const reg = await ghRead('registry.json');
-    return Array.isArray(reg) ? reg : [];
+    if (Array.isArray(reg) && reg.length > 0) return reg;
+
+    // Fallback: scan libellas/ directory in GitHub repo
+    const repo = getRepo();
+    const pat  = getPat();
+    if (!repo || !pat) return [];
+    try {
+      const r = await fetch(`${GH_API}/repos/${repo}/contents/libellas`, {
+        headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github.v3+json' },
+      });
+      if (r.ok) {
+        const items = await r.json();
+        if (Array.isArray(items)) {
+          const list = [];
+          for (const item of items) {
+            if (item.name.endsWith('.json')) {
+              const wt = await ghRead(item.path);
+              if (wt && wt.id) list.push(wt);
+            }
+          }
+          if (list.length > 0) {
+            await ghSaveRegistry(list).catch(() => {});
+            return list;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('ghListWatchtowers libellas/ scan error:', e);
+    }
+    return [];
   }
 
   async function ghGetWatchtower(id) {
@@ -152,9 +181,11 @@ const VaultClient = (() => {
       statusPageEnabled: body.statusPageEnabled !== false,
       statusPageAccess: body.statusPageAccess || 'public',
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     list.push(wt);
     await ghSaveRegistry(list);
+    await ghWrite(`libellas/${id}.json`, wt, `libella: create watchtower ${id}`).catch(() => {});
     return wt;
   }
 
@@ -162,8 +193,9 @@ const VaultClient = (() => {
     const list = await ghListWatchtowers();
     const idx = list.findIndex(w => w.id === id);
     if (idx < 0) return null;
-    Object.assign(list[idx], body);
+    Object.assign(list[idx], body, { updatedAt: new Date().toISOString() });
     await ghSaveRegistry(list);
+    await ghWrite(`libellas/${id}.json`, list[idx], `libella: update watchtower ${id}`).catch(() => {});
     return list[idx];
   }
 
@@ -645,6 +677,7 @@ function setupTabs() {
 
   libellaSelect?.addEventListener('change', () => {
     currentLibellaId = libellaSelect.value;
+    localStorage.setItem('libella_current_id', currentLibellaId);
     updateConfigTab();
     refreshAll();
   });
@@ -657,32 +690,47 @@ function setupTabs() {
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadWatchtowers() {
   try {
-    activeLibellas = await VaultClient.listWatchtowers();
-    libellaSelect.innerHTML = '';
+    const list = await VaultClient.listWatchtowers();
+    activeLibellas = Array.isArray(list) ? list : [];
+    if (libellaSelect) libellaSelect.innerHTML = '';
     for (const w of activeLibellas) {
       const opt = document.createElement('option');
       opt.value = w.id;
-      opt.innerText = w.name;
+      opt.textContent = w.name;
       libellaSelect.appendChild(opt);
     }
     if (activeLibellas.length > 0) {
-      if (!activeLibellas.some((w) => w.id === currentLibellaId)) {
+      const savedId = localStorage.getItem('libella_current_id');
+      if (savedId && activeLibellas.some(w => w.id === savedId)) {
+        currentLibellaId = savedId;
+      } else if (!activeLibellas.some((w) => w.id === currentLibellaId)) {
         currentLibellaId = activeLibellas[0].id;
       }
       libellaSelect.value = currentLibellaId;
+      localStorage.setItem('libella_current_id', currentLibellaId);
+      updateConfigTab();
+    } else {
+      activeLibellas = [{
+        id: 'default', name: 'Default Watchtower', slug: 'default',
+        ingestKey: 'lbk_default', budgetUsdMonthly: 50,
+        statusPageEnabled: true, statusPageAccess: 'public', mountedLenses: [],
+      }];
+      if (libellaSelect) libellaSelect.innerHTML = '<option value="default">Default Watchtower</option>';
+      currentLibellaId = 'default';
+      if (libellaSelect) libellaSelect.value = 'default';
       updateConfigTab();
     }
   } catch (err) {
     console.warn('loadWatchtowers error', err);
-    if (activeLibellas.length === 0) {
-      const u = localStorage.getItem('libella_vault_user') || 'user';
+    if (!activeLibellas || activeLibellas.length === 0) {
       activeLibellas = [{
-        id: 'default', name: `Default (@${u})`, slug: 'default',
-        ingestKey: `lbk_default`, budgetUsdMonthly: 50,
+        id: 'default', name: 'Default Watchtower', slug: 'default',
+        ingestKey: 'lbk_default', budgetUsdMonthly: 50,
         statusPageEnabled: true, statusPageAccess: 'public', mountedLenses: [],
       }];
-      libellaSelect.innerHTML = '<option value="default">Default Watchtower</option>';
+      if (libellaSelect) libellaSelect.innerHTML = '<option value="default">Default Watchtower</option>';
       currentLibellaId = 'default';
+      if (libellaSelect) libellaSelect.value = 'default';
       updateConfigTab();
     }
   }
@@ -1341,54 +1389,18 @@ document.getElementById('btnSaveWatchtowerConfig')?.addEventListener('click', as
   } catch (err) { toast('Error al guardar: ' + err.message, 'error'); }
 });
 
-document.getElementById('btnEditWatchtower')?.addEventListener('click', () => {
-  const current = activeLibellas.find(w => w.id === currentLibellaId);
-  if (!current) return;
-  document.getElementById('editWName').value   = current.name;
-  document.getElementById('editWBudget').value = current.budgetUsdMonthly || 50;
-  document.getElementById('editWStatusEnabled').checked = current.statusPageEnabled !== false;
-  document.getElementById('editWStatusAccess').value    = current.statusPageAccess || 'public';
-  document.getElementById('modalEditWatchtower').style.display = 'flex';
-});
-
-document.getElementById('btnCancelEditW')?.addEventListener('click', () => {
-  document.getElementById('modalEditWatchtower').style.display = 'none';
-});
-
-document.getElementById('btnSaveEditW')?.addEventListener('click', async () => {
-  const name             = document.getElementById('editWName').value.trim();
-  const budget           = Number(document.getElementById('editWBudget').value);
-  const statusPageEnabled = document.getElementById('editWStatusEnabled').checked;
-  const statusPageAccess = document.getElementById('editWStatusAccess').value;
-  if (!name) return toast('Especifica un nombre', 'warn');
-  try {
-    await VaultClient.updateWatchtower(currentLibellaId, { name, budgetUsdMonthly: budget, statusPageEnabled, statusPageAccess });
-    document.getElementById('modalEditWatchtower').style.display = 'none';
-    await loadWatchtowers();
-    refreshAll();
-    toast('Watchtower actualizado', 'success');
-  } catch (err) { toast('Error: ' + err.message, 'error'); }
-});
-
-document.getElementById('btnDeleteWatchtower')?.addEventListener('click', async () => {
-  if (!confirm(`¿Eliminar Watchtower '${currentLibellaId}' y toda su configuración?`)) return;
-  try {
-    await VaultClient.deleteWatchtower(currentLibellaId);
-    currentLibellaId = 'default';
-    await loadWatchtowers();
-    refreshAll();
-    toast('Watchtower eliminado', 'success');
-  } catch (err) { toast('Error: ' + err.message, 'error'); }
-});
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 14. Modals setup
 // ─────────────────────────────────────────────────────────────────────────────
 function setupModals() {
   // ── New Watchtower ──
   const mW = document.getElementById('modalNewWatchtower');
-  document.getElementById('btnNewWatchtower')?.addEventListener('click', () => mW.style.display = 'flex');
-  document.getElementById('btnCancelNewW')?.addEventListener('click', () => mW.style.display = 'none');
+  document.getElementById('btnNewWatchtower')?.addEventListener('click', () => {
+    if (mW) mW.style.display = 'flex';
+  });
+  document.getElementById('btnCancelNewW')?.addEventListener('click', () => {
+    if (mW) mW.style.display = 'none';
+  });
   document.getElementById('btnSaveNewW')?.addEventListener('click', async () => {
     const name             = document.getElementById('newWName').value.trim();
     const budget           = Number(document.getElementById('newWBudget').value) || 50;
@@ -1396,12 +1408,65 @@ function setupModals() {
     const statusPageAccess = document.getElementById('newWStatusAccess').value;
     if (!name) return toast('Especifica un nombre', 'warn');
     try {
-      await VaultClient.createWatchtower({ name, budgetUsdMonthly: budget, statusPageEnabled, statusPageAccess });
-      mW.style.display = 'none';
+      const created = await VaultClient.createWatchtower({ name, budgetUsdMonthly: budget, statusPageEnabled, statusPageAccess });
+      if (mW) mW.style.display = 'none';
       document.getElementById('newWName').value = '';
+      if (created && created.id) {
+        currentLibellaId = created.id;
+        localStorage.setItem('libella_current_id', currentLibellaId);
+      }
       await loadWatchtowers();
       refreshAll();
       toast(`Watchtower '${name}' creado`, 'success');
+    } catch (err) { toast('Error: ' + err.message, 'error'); }
+  });
+
+  // ── Edit Watchtower ──
+  const mEW = document.getElementById('modalEditWatchtower');
+  document.getElementById('btnEditWatchtower')?.addEventListener('click', () => {
+    const selectedId = currentLibellaId || libellaSelect?.value;
+    const current = activeLibellas.find(w => w.id === selectedId) || activeLibellas[0];
+    if (!current) {
+      toast('No hay un Watchtower seleccionado para editar', 'warn');
+      return;
+    }
+    currentLibellaId = current.id;
+    document.getElementById('editWName').value            = current.name || '';
+    document.getElementById('editWBudget').value          = current.budgetUsdMonthly || 50;
+    document.getElementById('editWStatusEnabled').checked = current.statusPageEnabled !== false;
+    document.getElementById('editWStatusAccess').value     = current.statusPageAccess || 'public';
+    if (mEW) mEW.style.display = 'flex';
+  });
+
+  document.getElementById('btnCancelEditW')?.addEventListener('click', () => {
+    if (mEW) mEW.style.display = 'none';
+  });
+
+  document.getElementById('btnSaveEditW')?.addEventListener('click', async () => {
+    const name             = document.getElementById('editWName').value.trim();
+    const budget           = Number(document.getElementById('editWBudget').value);
+    const statusPageEnabled = document.getElementById('editWStatusEnabled').checked;
+    const statusPageAccess = document.getElementById('editWStatusAccess').value;
+    if (!name) return toast('Especifica un nombre', 'warn');
+    try {
+      await VaultClient.updateWatchtower(currentLibellaId, { name, budgetUsdMonthly: budget, statusPageEnabled, statusPageAccess });
+      if (mEW) mEW.style.display = 'none';
+      await loadWatchtowers();
+      refreshAll();
+      toast(`Watchtower '${name}' actualizado`, 'success');
+    } catch (err) { toast('Error: ' + err.message, 'error'); }
+  });
+
+  document.getElementById('btnDeleteWatchtower')?.addEventListener('click', async () => {
+    const selectedId = currentLibellaId || libellaSelect?.value;
+    if (!confirm(`¿Eliminar Watchtower '${selectedId}' y toda su configuración?`)) return;
+    try {
+      await VaultClient.deleteWatchtower(selectedId);
+      localStorage.removeItem('libella_current_id');
+      currentLibellaId = 'default';
+      await loadWatchtowers();
+      refreshAll();
+      toast('Watchtower eliminado', 'success');
     } catch (err) { toast('Error: ' + err.message, 'error'); }
   });
 
@@ -1591,7 +1656,7 @@ function setupModals() {
       }
     }
 
-    const wt = watchtowers.find((w) => w.id === currentLibellaId) || watchtowers[0];
+    const wt = activeLibellas.find((w) => w.id === currentLibellaId) || activeLibellas[0];
     const wtId = wt?.id || 'default';
     const ingKey = wt?.ingestKey || 'lbk_...';
 
@@ -1655,6 +1720,23 @@ function setupModals() {
       }
     } catch (e) {
       toast('Error: ' + e.message, 'error');
+    }
+  });
+
+  // Close modals on outside click & escape key
+  const allModals = [mW, mEW, mML, mEL, mB, mEB, mAi, mInc, mRI, mEnv];
+  allModals.forEach(modal => {
+    if (!modal) return;
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      allModals.forEach(m => {
+        if (m && m.style.display !== 'none') m.style.display = 'none';
+      });
     }
   });
 }
@@ -1830,9 +1912,26 @@ function setupAuth() {
 }
 
 async function checkAuthStatus() {
+  const isLocal = await VaultClient.detectMode();
   const token = localStorage.getItem('libella_vault_pat');
   const mAuth = document.getElementById('modalAuthLogin');
   const userProfile = document.getElementById('userProfile');
+
+  // If local server is running, the user is authenticated via local daemon
+  if (isLocal) {
+    if (mAuth) mAuth.style.display = 'none';
+    if (userProfile) {
+      userProfile.style.display = 'flex';
+      const userDisplayName = document.getElementById('userDisplayName');
+      if (userDisplayName && (!userDisplayName.innerText || userDisplayName.innerText === '@user')) {
+        const u = localStorage.getItem('libella_vault_user') || 'local-daemon';
+        userDisplayName.innerText = `@${u}`;
+      }
+      const userTag = userProfile.querySelector('.user-storage-tag');
+      if (userTag) userTag.textContent = 'local /api/*';
+    }
+    return true;
+  }
 
   if (!token) {
     if (mAuth) mAuth.style.display = 'flex';
