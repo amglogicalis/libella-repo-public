@@ -495,7 +495,7 @@ const VaultClient = (() => {
   }
 
   function computeLogsFromEvents(events, { level, search, limit } = {}) {
-    let logs = events.filter(e => e.type === 'log');
+    let logs = events.filter(e => (e.message !== undefined && e.level !== undefined) || e.type === 'log');
     if (level) logs = logs.filter(l => (l.level || 'info').toLowerCase() === level);
     if (search) {
       const s = search.toLowerCase();
