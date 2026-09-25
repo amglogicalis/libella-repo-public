@@ -1007,19 +1007,21 @@ async function loadBreakers() {
     tbody.innerHTML = allBreakers.map(b => {
       const isTripped = b.status === 'tripped';
       const isEnabled = b.enabled !== false;
+      const isHardCutoff = Boolean(b.hardCutoff);
       const stBadge = !isEnabled
         ? '<span class="badge" style="background:rgba(100,116,139,0.2);color:#94a3b8;">PAUSADO</span>'
         : isTripped
-          ? '<span class="badge badge-danger">DISPARADO</span>'
-          : '<span class="badge badge-success">CERRADO</span>';
+          ? `<span class="badge badge-danger">DISPARADO</span>${isHardCutoff ? ' <span class="badge" style="background:rgba(239,68,68,0.2);color:#fca5a5;border:1px solid rgba(239,68,68,0.4);">⛔ GATEWAY BLOQUEADO</span>' : ''}`
+          : `<span class="badge badge-success">CERRADO</span>${isHardCutoff ? ' <span class="badge" style="background:rgba(239,68,68,0.1);color:#fca5a5;">HARD GATE</span>' : ''}`;
       const last = b.lastTriggeredAt ? b.lastTriggeredAt.slice(11, 19) : 'Nunca';
-      const win  = b.windowMinutes ? `${b.windowMinutes}m` : '60m';
+      const win  = b.windowMinutes ? `${b.windowMinutes}m` : '5m';
+      const cd   = b.cooldownMinutes ? `${b.cooldownMinutes}m cd` : '15m cd';
       const op   = b.op || '>';
       return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
         <td style="padding:0.6rem;">${stBadge}</td>
         <td style="padding:0.6rem;font-weight:600;color:#fff;">${escapeHtml(b.name)}</td>
         <td style="padding:0.6rem;font-family:var(--font-mono);">${b.metric} ${op} ${b.threshold}</td>
-        <td style="padding:0.6rem;color:var(--text-muted);">${win}</td>
+        <td style="padding:0.6rem;color:var(--text-muted);">${win} <span style="font-size:0.75rem;color:var(--text-gray);">(${cd})</span></td>
         <td style="padding:0.6rem;text-transform:uppercase;">${b.actionType}</td>
         <td style="padding:0.6rem;color:var(--text-muted);font-size:0.8rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(b.actionTarget)}</td>
         <td style="padding:0.6rem;color:var(--text-gray);">${last}</td>
@@ -1054,7 +1056,11 @@ window.openEditBreakerModal = (ruleId) => {
   document.getElementById('editBrkThreshold').value = b.threshold;
   document.getElementById('editBrkActionType').value = b.actionType;
   document.getElementById('editBrkTarget').value    = b.actionTarget;
-  document.getElementById('editBrkWindow').value    = b.windowMinutes || 60;
+  document.getElementById('editBrkWindow').value    = b.windowMinutes || 5;
+  const cdEl = document.getElementById('editBrkCooldown');
+  if (cdEl) cdEl.value = b.cooldownMinutes || 15;
+  const hcEl = document.getElementById('editBrkHardCutoff');
+  if (hcEl) hcEl.checked = Boolean(b.hardCutoff);
   document.getElementById('modalEditBreaker').style.display = 'flex';
 };
 
@@ -1535,12 +1541,15 @@ function setupModals() {
     const threshold   = Number(document.getElementById('brkThreshold').value);
     const actionType  = document.getElementById('brkActionType').value;
     const actionTarget = document.getElementById('brkTarget').value.trim();
-    const windowMinutes = Number(document.getElementById('brkWindow').value) || 60;
+    const windowMinutes = Number(document.getElementById('brkWindow').value) || 5;
+    const cooldownMinutes = Number(document.getElementById('brkCooldown')?.value) || 15;
+    const hardCutoff = Boolean(document.getElementById('brkHardCutoff')?.checked);
     if (!name || !actionTarget) return toast('Completa todos los campos requeridos', 'warn');
     try {
-      await VaultClient.createBreaker(currentLibellaId, { name, metric, op, threshold, actionType, actionTarget, windowMinutes });
+      await VaultClient.createBreaker(currentLibellaId, { name, metric, op, threshold, actionType, actionTarget, windowMinutes, cooldownMinutes, hardCutoff });
       mB.style.display = 'none';
       document.getElementById('brkName').value = '';
+      if (document.getElementById('brkHardCutoff')) document.getElementById('brkHardCutoff').checked = false;
       await loadBreakers();
       toast(`Breaker '${name}' creado`, 'success');
     } catch (err) { toast('Error: ' + err.message, 'error'); }
@@ -1557,9 +1566,11 @@ function setupModals() {
     const threshold   = Number(document.getElementById('editBrkThreshold').value);
     const actionType  = document.getElementById('editBrkActionType').value;
     const actionTarget = document.getElementById('editBrkTarget').value.trim();
-    const windowMinutes = Number(document.getElementById('editBrkWindow').value) || 60;
+    const windowMinutes = Number(document.getElementById('editBrkWindow').value) || 5;
+    const cooldownMinutes = Number(document.getElementById('editBrkCooldown')?.value) || 15;
+    const hardCutoff = Boolean(document.getElementById('editBrkHardCutoff')?.checked);
     try {
-      await VaultClient.updateBreaker(currentLibellaId, ruleId, { name, metric, op, threshold, actionType, actionTarget, windowMinutes });
+      await VaultClient.updateBreaker(currentLibellaId, ruleId, { name, metric, op, threshold, actionType, actionTarget, windowMinutes, cooldownMinutes, hardCutoff });
       mEB.style.display = 'none';
       await loadBreakers();
       toast('Breaker actualizado', 'success');
