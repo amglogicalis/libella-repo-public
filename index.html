@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -17,7 +17,7 @@
     <div class="brand">
       <img src="assets/logo_libella.png" alt="Libella Logo" class="logo">
       <div class="brand-text">
-        <h1>LIBELLA <span class="tag">Panopticon v1.0.0</span></h1>
+        <h1>LIBELLA <span class="tag">Panopticon v1.0.0</span> <span id="consoleModeTag" class="tag" style="font-family:var(--font-mono);font-size:0.72rem;opacity:0.7;" title="Detectando modo...">—</span></h1>
         <p>Universal Telemetry, Edge Time-Series & Multi-Cloud FinOps ($0 Infrastructure)</p>
       </div>
     </div>
@@ -226,6 +226,7 @@
                 <th style="padding:0.6rem;">Estado</th>
                 <th style="padding:0.6rem;">Nombre</th>
                 <th style="padding:0.6rem;">Regla</th>
+                <th style="padding:0.6rem;">Ventana</th>
                 <th style="padding:0.6rem;">Acción Disparada</th>
                 <th style="padding:0.6rem;">Destino</th>
                 <th style="padding:0.6rem;">Último Disparo</th>
@@ -233,7 +234,7 @@
               </tr>
             </thead>
             <tbody id="breakersTableBody">
-              <tr><td colspan="7" style="padding:1rem; text-align:center; color:var(--text-gray);">No hay disyuntores activos</td></tr>
+              <tr><td colspan="8" style="padding:1rem; text-align:center; color:var(--text-gray);">No hay disyuntores activos</td></tr>
             </tbody>
           </table>
         </div>
@@ -329,8 +330,11 @@
           <button id="simVercel" class="btn btn-ghost btn-sm">▲ Simular Petición Vercel (120ms)</button>
           <button id="simOpenAi" class="btn btn-ghost btn-sm">🤖 Simular Consulta GPT-4o (750 tokens)</button>
           <button id="simClaude" class="btn btn-ghost btn-sm">🧠 Simular Consulta Claude 3.5 (1200 tokens)</button>
+          <button id="simGemini" class="btn btn-ghost btn-sm">✨ Simular Gemini 1.5 Pro (2400 tokens)</button>
+          <button id="simDeepSeek" class="btn btn-ghost btn-sm">🔥 Simular DeepSeek Chat (3800 tokens)</button>
           <button id="simUpstash" class="btn btn-ghost btn-sm">⚡ Simular Comandos Upstash</button>
           <button id="simSpike" class="btn btn-ghost btn-sm" style="color:var(--warning); border-color:var(--warning-glow);">⚠️ Simular Pico de Latencia (2800ms)</button>
+          <button id="simRateLimit" class="btn btn-ghost btn-sm" style="color:var(--warning); border-color:var(--warning-glow);">🚦 Simular Rate Limit 429</button>
           <button id="simFatal" class="btn btn-ghost btn-sm" style="color:var(--danger); border-color:var(--danger-glow);">🚨 Simular Log FATAL 500</button>
         </div>
       </div>
@@ -489,6 +493,11 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
         </div>
       </div>
 
+      <div style="margin-bottom:1.2rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">VENTANA DE EVALUACIÓN (MINUTOS)</label>
+        <input type="number" id="brkWindow" class="search-input" value="60" min="5" max="1440" style="width:100%; margin-top:0.3rem;" placeholder="Ventana de tiempo para evaluar la regla (minutos)">
+      </div>
+
       <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
         <button id="btnCancelBrk" class="btn btn-ghost btn-sm">Cancelar</button>
         <button id="btnSaveBrk" class="btn btn-primary btn-sm">Guardar Breaker</button>
@@ -556,6 +565,8 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
         <input type="password" id="vSecret" class="search-input" placeholder="Clave secreta para validar x-vercel-signature" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
         <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROJECT ID EN VERCEL</label>
         <input type="text" id="vProjectId" class="search-input" placeholder="prj_xxxxxxxxxxxx" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">LOG DRAIN ID (OPCIONAL)</label>
+        <input type="text" id="vDrainId" class="search-input" placeholder="ld_xxxxxxxxxxxx" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
         <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">ENTORNO FILTRADO</label>
         <select id="vEnv" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:1rem;">
           <option value="production">Solo Producción (production)</option>
@@ -596,6 +607,8 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
         </select>
         <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">MODELO POR DEFECTO</label>
         <input type="text" id="aiDefaultModel" class="search-input" value="gpt-4o" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">API KEY (OPCIONAL)</label>
+        <input type="password" id="aiApiKey" class="search-input" placeholder="sk-..." style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
         <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROXY BASE URL (OPCIONAL)</label>
         <input type="text" id="aiProxyUrl" class="search-input" placeholder="https://api.openai.com/v1" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
       </div>
@@ -608,6 +621,8 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
           <option value="http/protobuf">HTTP/Protobuf</option>
           <option value="grpc">gRPC (Puerto 4317)</option>
         </select>
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PUERTO OTLP COLLECTOR</label>
+        <input type="number" id="otelPort" class="search-input" value="4318" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
         <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">SERVICE NAME</label>
         <input type="text" id="otelServiceName" class="search-input" placeholder="payment-service" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
       </div>
@@ -644,19 +659,124 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
     </div>
   </div>
 
-  <!-- MODAL: EDITAR LENTE -->
+  <!-- MODAL: EDITAR LENTE — Config completo por tipo -->
   <div id="modalEditLens" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:999; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:440px;">
-      <h3 style="color:#fff; margin-bottom:1rem; font-size:1.15rem;">✏️ Editar Lente Montada</h3>
+    <div style="background:var(--bg-surface); border:1px solid var(--primary-border); border-radius:14px; padding:1.8rem; width:90%; max-width:520px; max-height:92vh; overflow-y:auto;">
+      <h3 style="color:#fff; margin-bottom:0.4rem; font-size:1.15rem;">✏️ Editar Lente Montada</h3>
+      <p style="color:var(--text-gray); font-size:0.8rem; margin-bottom:1rem;">
+        Tipo: <span id="editLensTypeTag" class="badge" style="background:rgba(20,219,96,0.15);color:var(--primary);font-family:var(--font-mono);">—</span>
+      </p>
       <input type="hidden" id="editLensId">
+
       <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE DE LA LENTE</label>
-      <input type="text" id="editLensName" class="search-input" style="width:100%; margin-top:0.3rem; margin-bottom:1.4rem;">
-      <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
+      <input type="text" id="editLensName" class="search-input" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+
+      <!-- Vercel fields -->
+      <div id="editFieldsVercel" class="edit-lens-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">LOG DRAIN SECRET</label>
+        <input type="password" id="editVSecret" class="search-input" placeholder="••••••••" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROJECT ID</label>
+        <input type="text" id="editVProjectId" class="search-input" placeholder="prj_xxxxxxxxxxxx" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">LOG DRAIN ID</label>
+        <input type="text" id="editVDrainId" class="search-input" placeholder="ld_xxxxxxxxxxxx" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">ENTORNO</label>
+        <select id="editVEnv" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:1rem;">
+          <option value="production">Solo Producción</option>
+          <option value="preview">Preview / Staging</option>
+          <option value="all">Todos los entornos</option>
+        </select>
+      </div>
+
+      <!-- AWS fields -->
+      <div id="editFieldsAws" class="edit-lens-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">REGIÓN AWS</label>
+        <input type="text" id="editAwsRegion" class="search-input" value="us-east-1" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CLOUDWATCH LOG GROUP</label>
+        <input type="text" id="editAwsLogGroup" class="search-input" placeholder="/aws/lambda/api-gateway-service" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">SNS TOPIC ARN</label>
+        <input type="text" id="editAwsSnsArn" class="search-input" placeholder="arn:aws:sns:us-east-1:..." style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">S3 BUCKET (CUR / ACCESS LOGS)</label>
+        <input type="text" id="editAwsS3" class="search-input" placeholder="my-billing-reports-bucket" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- Upstash fields -->
+      <div id="editFieldsUpstash" class="edit-lens-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">UPSTASH REST URL</label>
+        <input type="text" id="editUpstashUrl" class="search-input" placeholder="https://flowing-hare-12345.upstash.io" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">READ-ONLY TOKEN</label>
+        <input type="password" id="editUpstashToken" class="search-input" placeholder="AXxxxxxxx=" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">BASE DE DATOS / CLÚSTER</label>
+        <input type="text" id="editUpstashDb" class="search-input" placeholder="cache-redis-prod" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- AI fields -->
+      <div id="editFieldsAi" class="edit-lens-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROVEEDOR PRINCIPAL</label>
+        <select id="editAiProvider" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:0.8rem;">
+          <option value="openai">OpenAI (GPT-4o, o3, etc.)</option>
+          <option value="anthropic">Anthropic (Claude 3.5 Sonnet / Haiku)</option>
+          <option value="google">Google Gemini</option>
+          <option value="groq">Groq LPU (Llama 3.3)</option>
+          <option value="deepseek">DeepSeek</option>
+          <option value="openrouter">OpenRouter Multi-Provider</option>
+        </select>
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">MODELO POR DEFECTO</label>
+        <input type="text" id="editAiModel" class="search-input" value="gpt-4o" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">API KEY (OPCIONAL — se guarda en tu repo privado)</label>
+        <input type="password" id="editAiApiKey" class="search-input" placeholder="sk-..." style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROXY BASE URL (OPCIONAL)</label>
+        <input type="text" id="editAiProxyUrl" class="search-input" placeholder="https://api.openai.com/v1" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- OTel / OTLP fields -->
+      <div id="editFieldsOtel" class="edit-lens-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PROTOCOLO OTLP</label>
+        <select id="editOtelProto" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:0.8rem;">
+          <option value="http/json">HTTP/JSON (Puerto 4318)</option>
+          <option value="http/protobuf">HTTP/Protobuf</option>
+          <option value="grpc">gRPC (Puerto 4317)</option>
+        </select>
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PUERTO OTLP COLLECTOR</label>
+        <input type="number" id="editOtelPort" class="search-input" value="4318" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">SERVICE NAME</label>
+        <input type="text" id="editOtelService" class="search-input" placeholder="payment-service" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- Terra fields -->
+      <div id="editFieldsTerra" class="edit-lens-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">APLICACIÓN TERRA</label>
+        <select id="editTerraApp" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem; margin-bottom:0.8rem;">
+          <option value="formica">🐜 Formica</option>
+          <option value="maskito">🦟 Maskito</option>
+          <option value="rolla">🦔 RollA</option>
+          <option value="phryx">🦗 Phryx</option>
+          <option value="webbl">🕷️ Webbl</option>
+          <option value="syncada">🪰 Syncada</option>
+        </select>
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">STORAGE VAULT REPO</label>
+        <input type="text" id="editTerraVault" class="search-input" placeholder=".formica-storage" style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <!-- BYOL fields -->
+      <div id="editFieldsByol" class="edit-lens-fields" style="display:none;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">AUTH HEADER (OPCIONAL)</label>
+        <input type="text" id="editByolAuth" class="search-input" placeholder="Bearer mi-token-secreto" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CAMPO DE LATENCIA</label>
+        <input type="text" id="editByolLatency" class="search-input" value="duration_ms" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">CAMPO DE ERROR</label>
+        <input type="text" id="editByolError" class="search-input" value="error" style="width:100%; margin-top:0.3rem; margin-bottom:0.8rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">MAPEO DE TAGS (JSON, opcional)</label>
+        <input type="text" id="editByolTagsMap" class="search-input" placeholder='{"service": "service_name"}' style="width:100%; margin-top:0.3rem; margin-bottom:1rem;">
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:0.5rem;">
         <button id="btnCancelEditLens" class="btn btn-ghost btn-sm">Cancelar</button>
-        <button id="btnSaveEditLens" class="btn btn-primary btn-sm">Guardar Nombre</button>
+        <button id="btnSaveEditLens" class="btn btn-primary btn-sm">💾 Guardar Cambios</button>
       </div>
     </div>
   </div>
+
+
 
   <!-- MODAL: EDITAR BREAKER -->
   <div id="modalEditBreaker" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(8px); z-index:999; align-items:center; justify-content:center;">
@@ -695,6 +815,11 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
           <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">DESTINO (URL / REPO)</label>
           <input type="text" id="editBrkTarget" class="search-input" style="width:100%; margin-top:0.3rem;">
         </div>
+      </div>
+
+      <div style="margin-bottom:1.2rem;">
+        <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">VENTANA DE EVALUACIÓN (MINUTOS)</label>
+        <input type="number" id="editBrkWindow" class="search-input" value="60" min="5" max="1440" style="width:100%; margin-top:0.3rem;">
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
@@ -880,5 +1005,6 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
   </footer>
 
   <script src="app.js"></script>
+  <div id="toastContainer"></div>
 </body>
 </html>

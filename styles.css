@@ -832,3 +832,58 @@ footer a {
   margin-right: 0.5rem;
   margin-bottom: 0.5rem;
 }
+
+/* LENS PROVIDER FIELDS — shown/hidden by JS based on selected lens type */
+.lens-provider-fields {
+  display: none;
+}
+.lens-provider-fields.active {
+  display: block;
+}
+
+/* EDIT LENS FIELDS — same pattern for the edit modal */
+.edit-lens-fields {
+  display: none;
+}
+.edit-lens-fields.active {
+  display: block;
+}
+
+/* TOAST NOTIFICATIONS */
+#toastContainer {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+.toast {
+  pointer-events: all;
+  padding: 0.65rem 1.1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  max-width: 360px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  animation: toastIn 0.3s ease;
+  border: 1px solid transparent;
+}
+.toast-success { background: #0d2e1a; color: var(--primary); border-color: var(--primary-border); }
+.toast-error   { background: #2e0d0d; color: #ff6b6b; border-color: rgba(255,107,107,0.3); }
+.toast-warn    { background: #2e200d; color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+.toast-info    { background: #0d1a2e; color: #60a5fa; border-color: rgba(96,165,250,0.3); }
+.toast-copy    { background: #1a0d2e; color: #c084fc; border-color: rgba(192,132,252,0.3); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* MODE TAG */
+#consoleModeTag {
+  font-size: 0.72rem !important;
+  opacity: 0.8;
+  vertical-align: middle;
+}
