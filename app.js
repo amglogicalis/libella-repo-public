@@ -176,8 +176,12 @@ const VaultClient = (() => {
     const ingestKey = `lbk_${Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2)}`;
     const wt = {
       id, name: body.name, slug: body.slug || id,
+      description: body.description || '',
+      environment: body.environment || 'production',
       ingestKey, mountedLenses: [], circuitBreakers: [],
       budgetUsdMonthly: body.budgetUsdMonthly || 50,
+      budgetUsdDaily: body.budgetUsdDaily !== undefined ? body.budgetUsdDaily : undefined,
+      statusPageSlug: body.statusPageSlug || body.slug || id,
       statusPageEnabled: body.statusPageEnabled !== false,
       statusPageAccess: body.statusPageAccess || 'public',
       createdAt: new Date().toISOString(),
@@ -552,6 +556,18 @@ const VaultClient = (() => {
     async deleteWatchtower(id) {
       if (await detectMode()) return call('DELETE', `/api/libellas/${id}`);
       return ghDeleteWatchtower(id);
+    },
+    async rotateKey(id) {
+      if (await detectMode()) return call('POST', `/api/libellas/${id}/rotate-key`);
+      const list = await ghListWatchtowers();
+      const idx = list.findIndex(w => w.id === id);
+      if (idx < 0) return null;
+      const newKey = `lbk_${Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2)}`;
+      list[idx].ingestKey = newKey;
+      list[idx].updatedAt = new Date().toISOString();
+      await ghSaveRegistry(list);
+      await ghWrite(`libellas/${id}.json`, list[idx], `libella: rotate ingest key for ${id}`).catch(() => {});
+      return { success: true, ingestKey: newKey, watchtower: list[idx] };
     },
     async getVitals(libId, range) {
       if (await detectMode()) return call('GET', `/api/libellas/${libId}/vitals?range=${range}`);
@@ -1423,17 +1439,33 @@ function updateConfigTab() {
   document.getElementById('cfgKey').value   = current.ingestKey || 'lbk_live';
   document.getElementById('cfgBudget').value = current.budgetUsdMonthly || 50;
 
+  const envEl = document.getElementById('cfgEnvironment');
+  if (envEl) envEl.value = current.environment || 'production';
+  const descEl = document.getElementById('cfgDescription');
+  if (descEl) descEl.value = current.description || '';
+  const dailyEl = document.getElementById('cfgDailyBudget');
+  if (dailyEl) dailyEl.value = current.budgetUsdDaily !== undefined && current.budgetUsdDaily !== null ? current.budgetUsdDaily : '';
+  const slugEl = document.getElementById('cfgStatusSlug');
+  if (slugEl) slugEl.value = current.statusPageSlug || current.slug || '';
+
   const statusChk = document.getElementById('cfgStatusPageEnabled');
   if (statusChk) statusChk.checked = current.statusPageEnabled !== false;
   const statusAccess = document.getElementById('cfgStatusPageAccess');
   if (statusAccess) statusAccess.value = current.statusPageAccess || 'public';
 
-  // Dynamic snippet with real watchtower ID and ingest key
+  const openLink = document.getElementById('btnOpenStatusPage');
+  if (openLink) {
+    const slug = current.statusPageSlug || current.slug || current.id;
+    openLink.href = `status.html?id=${encodeURIComponent(slug)}`;
+  }
+
+  // Dynamic snippet with real watchtower ID, environment and ingest key
   const snippet = `import { Libella } from 'terra-libella';
 
 // Option 1 — Full SDK (Node.js / Edge runtime)
 const libella = new Libella({
   libellaId: '${current.id}',
+  environment: '${current.environment || 'production'}',
   vaultToken: process.env.GITHUB_PAT,
   storageRepo: '${localStorage.getItem('libella_vault_repo') || '<user>/.libella-storage'}',
 });
@@ -1466,16 +1498,69 @@ document.getElementById('btnCopyKey')?.addEventListener('click', () => {
   navigator.clipboard.writeText(key).then(() => toast('Ingest Key copiada', 'copy'));
 });
 
-document.getElementById('btnSaveWatchtowerConfig')?.addEventListener('click', async () => {
-  const name             = document.getElementById('cfgName').value.trim();
-  const budget           = Number(document.getElementById('cfgBudget').value);
-  const statusPageEnabled = document.getElementById('cfgStatusPageEnabled').checked;
-  const statusPageAccess = document.getElementById('cfgStatusPageAccess').value;
+document.getElementById('btnRotateKey')?.addEventListener('click', async () => {
+  if (!confirm('⚠️ ¿Estás seguro de que deseas regenerar la INGEST KEY?\n\nLa clave actual quedará invalidada inmediatamente y cualquier servicio o webhook que use la clave antigua dejará de poder enviar telemetría.')) {
+    return;
+  }
   try {
-    await VaultClient.updateWatchtower(currentLibellaId, { name, budgetUsdMonthly: budget, statusPageEnabled, statusPageAccess });
-    toast('Configuración guardada', 'success');
+    const res = await VaultClient.rotateKey(currentLibellaId);
+    if (res && res.ingestKey) {
+      document.getElementById('cfgKey').value = res.ingestKey;
+      toast('Ingest Key rotada con éxito', 'success');
+      await loadWatchtowers();
+      updateConfigTab();
+    } else {
+      toast('No se pudo rotar la clave', 'error');
+    }
+  } catch (err) {
+    toast('Error rotando clave: ' + err.message, 'error');
+  }
+});
+
+document.getElementById('btnSaveWatchtowerConfig')?.addEventListener('click', async () => {
+  const name              = document.getElementById('cfgName').value.trim();
+  const environment       = document.getElementById('cfgEnvironment')?.value || 'production';
+  const description       = document.getElementById('cfgDescription')?.value.trim() || '';
+  const budgetUsdMonthly  = Number(document.getElementById('cfgBudget').value) || 0;
+  const dailyRaw          = document.getElementById('cfgDailyBudget')?.value.trim();
+  const budgetUsdDaily    = dailyRaw ? Number(dailyRaw) : undefined;
+  const statusPageSlug    = document.getElementById('cfgStatusSlug')?.value.trim() || undefined;
+  const statusPageEnabled = document.getElementById('cfgStatusPageEnabled').checked;
+  const statusPageAccess  = document.getElementById('cfgStatusPageAccess').value;
+
+  try {
+    await VaultClient.updateWatchtower(currentLibellaId, {
+      name,
+      environment,
+      description,
+      budgetUsdMonthly,
+      budgetUsdDaily,
+      statusPageSlug,
+      statusPageEnabled,
+      statusPageAccess,
+    });
+    toast('Configuración guardada correctamente', 'success');
     await loadWatchtowers();
+    updateConfigTab();
   } catch (err) { toast('Error al guardar: ' + err.message, 'error'); }
+});
+
+document.getElementById('btnDeleteWatchtowerFromConfig')?.addEventListener('click', async () => {
+  const current = activeLibellas.find(w => w.id === currentLibellaId);
+  const name = current?.name || currentLibellaId;
+  if (!confirm(`⚠️ ACCIÓN IRREVERSIBLE:\n\n¿Estás seguro de que deseas eliminar permanentemente el Watchtower '${name}' (${currentLibellaId})?\n\nSe eliminarán sus métricas, configuración y disyuntores asociados.`)) {
+    return;
+  }
+  try {
+    await VaultClient.deleteWatchtower(currentLibellaId);
+    localStorage.removeItem('libella_current_id');
+    currentLibellaId = 'default';
+    await loadWatchtowers();
+    refreshAll();
+    toast(`Watchtower '${name}' eliminado`, 'success');
+  } catch (err) {
+    toast('Error al eliminar Watchtower: ' + err.message, 'error');
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

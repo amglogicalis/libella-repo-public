@@ -385,33 +385,85 @@
             <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">ID DEL WATCHTOWER</label>
             <input type="text" id="cfgId" class="search-input" readonly style="width:100%; margin-top:0.3rem;">
 
-            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">NOMBRE</label>
-            <input type="text" id="cfgName" class="search-input" style="width:100%; margin-top:0.3rem;">
+            <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:0.8rem; margin-top:1rem;">
+              <div>
+                <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">NOMBRE</label>
+                <input type="text" id="cfgName" class="search-input" style="width:100%; margin-top:0.3rem;">
+              </div>
+              <div>
+                <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">ENTORNO (ENV)</label>
+                <select id="cfgEnvironment" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
+                  <option value="production">🟢 Producción</option>
+                  <option value="staging">🟡 Staging</option>
+                  <option value="preview">🟣 Preview / PRs</option>
+                  <option value="development">🔵 Desarrollo</option>
+                </select>
+              </div>
+            </div>
+
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">DESCRIPCIÓN / PROPÓSITO</label>
+            <input type="text" id="cfgDescription" class="search-input" placeholder="ej. Backend Core, Microservicios de Checkout y Pagos" style="width:100%; margin-top:0.3rem;">
 
             <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">INGEST KEY (CLAVE SECRETA DE TELEMETRÍA)</label>
             <div style="display:flex; gap:0.4rem; margin-top:0.3rem;">
               <input type="text" id="cfgKey" class="search-input" readonly style="font-family:var(--font-mono); font-size:0.8rem;">
-              <button id="btnCopyKey" class="btn btn-ghost btn-sm">Copiar</button>
+              <button id="btnCopyKey" class="btn btn-ghost btn-sm" title="Copiar Ingest Key">📋 Copiar</button>
+              <button id="btnRotateKey" class="btn btn-ghost btn-sm" style="color:#f59e0b; border-color:rgba(245,158,11,0.3);" title="Regenerar Ingest Key">🔄 Rotar</button>
             </div>
 
-            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">PRESUPUESTO MENSUAL (USD)</label>
-            <input type="number" id="cfgBudget" class="search-input" style="width:100%; margin-top:0.3rem;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem; margin-top:1rem;">
+              <div>
+                <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PRESUPUESTO MENSUAL (USD)</label>
+                <input type="number" id="cfgBudget" class="search-input" style="width:100%; margin-top:0.3rem;">
+              </div>
+              <div>
+                <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">PRESUPUESTO DIARIO (USD)</label>
+                <input type="number" id="cfgDailyBudget" class="search-input" style="width:100%; margin-top:0.3rem;" placeholder="ej. 5">
+              </div>
+            </div>
 
-            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1rem; display:block;">PÁGINA DE ESTADO PÚBLICA (STATUS PAGE)</label>
+            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:1.2rem; display:block;">PÁGINA DE ESTADO PÚBLICA (STATUS PAGE)</label>
             <div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.4rem;">
               <input type="checkbox" id="cfgStatusPageEnabled" style="accent-color:var(--primary); width:18px; height:18px;">
               <label for="cfgStatusPageEnabled" style="font-size:0.85rem; color:#fff;">Habilitar Página de Estado para este Watchtower</label>
             </div>
 
-            <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600; margin-top:0.8rem; display:block;">CONTROL DE ACCESO Y VISIBILIDAD</label>
-            <select id="cfgStatusPageAccess" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
-              <option value="public">🌐 Pública (Accesible por cualquier usuario con la URL)</option>
-              <option value="private">🔒 Privada / Deshabilitada (Acceso bloqueado en status.html)</option>
-            </select>
+            <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:0.8rem; margin-top:0.8rem;">
+              <div>
+                <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">SLUG PERSONALIZADO</label>
+                <input type="text" id="cfgStatusSlug" class="search-input" placeholder="ej. terra-core" style="width:100%; margin-top:0.3rem;">
+              </div>
+              <div>
+                <label style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">ACCESO</label>
+                <select id="cfgStatusPageAccess" class="clean-select" style="width:100%; background:#050e08; border:1px solid var(--primary-border); padding:0.45rem; border-radius:8px; margin-top:0.3rem;">
+                  <option value="public">🌐 Pública</option>
+                  <option value="private">🔒 Privada</option>
+                </select>
+              </div>
+            </div>
 
-            <button id="btnSaveWatchtowerConfig" class="btn btn-primary btn-sm" style="margin-top:1.2rem; width:100%;">
+            <div style="margin-top:0.6rem;">
+              <a id="btnOpenStatusPage" href="status.html" target="_blank" class="btn btn-ghost btn-sm" style="display:inline-flex; align-items:center; gap:0.4rem; color:var(--primary); text-decoration:none; font-size:0.78rem;">
+                🌐 Abrir Página de Estado en vivo ↗
+              </a>
+            </div>
+
+            <button id="btnSaveWatchtowerConfig" class="btn btn-primary btn-sm" style="margin-top:1.4rem; width:100%;">
               💾 Guardar Configuración de Watchtower
             </button>
+
+            <!-- ZONA DE PELIGRO -->
+            <div style="margin-top:2rem; padding:1.1rem; border-radius:10px; border:1px solid rgba(239, 68, 68, 0.35); background:rgba(239, 68, 68, 0.04);">
+              <div style="font-weight:700; color:#ef4444; font-size:0.88rem; margin-bottom:0.3rem; display:flex; align-items:center; gap:0.4rem;">
+                <span>⚠️</span> Zona de Peligro (Danger Zone)
+              </div>
+              <p style="font-size:0.76rem; color:var(--text-muted); margin-bottom:0.8rem; line-height:1.4;">
+                Eliminar permanentemente este Watchtower, sus disyuntores de salud, lentes de ingesta montadas y telemetría histórica.
+              </p>
+              <button id="btnDeleteWatchtowerFromConfig" class="btn btn-danger btn-sm" style="background:rgba(239, 68, 68, 0.15); border:1px solid #ef4444; color:#fca5a5; width:100%;">
+                🗑️ Eliminar este Watchtower
+              </button>
+            </div>
           </div>
 
           <div>
