@@ -252,7 +252,9 @@ const VaultClient = (() => {
       metric: body.metric,
       op: body.op || '>',
       threshold: Number(body.threshold),
-      windowMinutes: body.windowMinutes ? Number(body.windowMinutes) : 60,
+      windowMinutes: body.windowMinutes ? Number(body.windowMinutes) : 5,
+      cooldownMinutes: body.cooldownMinutes ? Number(body.cooldownMinutes) : 15,
+      hardCutoff: Boolean(body.hardCutoff),
       actionType: body.actionType,
       actionTarget: body.actionTarget,
       status: 'closed',
@@ -261,31 +263,82 @@ const VaultClient = (() => {
     if (!list[idx].circuitBreakers) list[idx].circuitBreakers = [];
     list[idx].circuitBreakers.push(rule);
     await ghSaveRegistry(list);
+    await ghWrite(`breakers/${rule.id}.json`, rule, `feat(breakers): add ${rule.id}`);
     return rule;
   }
 
   async function ghListBreakers(libId) {
     const wt = await ghGetWatchtower(libId);
-    return wt?.circuitBreakers || [];
+    let breakers = wt?.circuitBreakers || [];
+    const r = getRepo();
+    const p = getPat();
+    if (r && p) {
+      try {
+        const res = await fetch(`https://api.github.com/repos/${r}/contents/breakers`, {
+          headers: { Authorization: `Bearer ${p}`, Accept: 'application/vnd.github.v3+json' }
+        });
+        if (res.ok) {
+          const files = await res.json();
+          const remoteList = [];
+          for (const f of files) {
+            if (f.name && f.name.endsWith('.json')) {
+              const rule = await ghRead(`breakers/${f.name}`);
+              if (rule && (!libId || rule.libellaId === libId)) {
+                remoteList.push(rule);
+              }
+            }
+          }
+          if (remoteList.length > 0) return remoteList;
+        }
+      } catch {}
+    }
+    return breakers;
   }
 
   async function ghUpdateBreaker(libId, ruleId, body) {
     const list = await ghListWatchtowers();
     const wIdx = list.findIndex(w => w.id === libId);
-    if (wIdx < 0) return null;
-    const bIdx = (list[wIdx].circuitBreakers || []).findIndex(b => b.id === ruleId);
-    if (bIdx < 0) return null;
-    Object.assign(list[wIdx].circuitBreakers[bIdx], body);
-    await ghSaveRegistry(list);
-    return list[wIdx].circuitBreakers[bIdx];
+    let updatedRule = null;
+    if (wIdx >= 0) {
+      const bIdx = (list[wIdx].circuitBreakers || []).findIndex(b => b.id === ruleId);
+      if (bIdx >= 0) {
+        Object.assign(list[wIdx].circuitBreakers[bIdx], body);
+        updatedRule = list[wIdx].circuitBreakers[bIdx];
+        await ghSaveRegistry(list);
+      }
+    }
+    const existingRemote = await ghRead(`breakers/${ruleId}.json`);
+    if (existingRemote) {
+      Object.assign(existingRemote, body);
+      await ghWrite(`breakers/${ruleId}.json`, existingRemote, `chore(breakers): update ${ruleId}`);
+      if (!updatedRule) updatedRule = existingRemote;
+    }
+    return updatedRule;
   }
 
   async function ghDeleteBreaker(libId, ruleId) {
     const list = await ghListWatchtowers();
     const wIdx = list.findIndex(w => w.id === libId);
-    if (wIdx < 0) return false;
-    list[wIdx].circuitBreakers = (list[wIdx].circuitBreakers || []).filter(b => b.id !== ruleId);
-    await ghSaveRegistry(list);
+    if (wIdx >= 0) {
+      list[wIdx].circuitBreakers = (list[wIdx].circuitBreakers || []).filter(b => b.id !== ruleId);
+      await ghSaveRegistry(list);
+    }
+    const r = getRepo();
+    const p = getPat();
+    if (r && p) {
+      try {
+        const fileInfo = await fetch(`https://api.github.com/repos/${r}/contents/breakers/${ruleId}.json`, {
+          headers: { Authorization: `Bearer ${p}`, Accept: 'application/vnd.github.v3+json' }
+        }).then(res => res.json());
+        if (fileInfo && fileInfo.sha) {
+          await fetch(`https://api.github.com/repos/${r}/contents/breakers/${ruleId}.json`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${p}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: `chore(breakers): delete ${ruleId}`, sha: fileInfo.sha })
+          });
+        }
+      } catch {}
+    }
     return true;
   }
 
@@ -319,21 +372,33 @@ const VaultClient = (() => {
     return { ...(wt?.customAiPricing || {}) };
   }
 
-  // ── Events (read hot events from vault/events/ path in GH repo) ──
+  // ── Events (read hot events from events/ path in GH repo) ──
   async function ghReadEvents(libId, range) {
-    const events = await ghRead(`vault/${libId}/events.json`) || [];
     const now = Date.now();
+    const today = new Date().toISOString().slice(0, 10);
+    let events = (await ghRead(`events/${libId}/${today}.json`)) || [];
+    
+    // For wider ranges, read previous day
+    if (range === '7d' || range === '30d') {
+      const yesterday = new Date(now - 86400000).toISOString().slice(0, 10);
+      const prev = (await ghRead(`events/${libId}/${yesterday}.json`)) || [];
+      events = [...events, ...prev];
+    }
+
+    if (!events.length) {
+      events = (await ghRead(`vault/${libId}/events.json`)) || [];
+    }
+
     const msMap = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
     const windowMs = msMap[range] || msMap['24h'];
     return events.filter(e => new Date(e.timestamp || e.createdAt || 0).getTime() > now - windowMs);
   }
 
   async function ghAppendEvent(libId, event) {
-    const existing = await ghRead(`vault/${libId}/events.json`) || [];
+    const today = new Date().toISOString().slice(0, 10);
+    const existing = (await ghRead(`events/${libId}/${today}.json`)) || [];
     existing.push({ ...event, timestamp: event.timestamp || new Date().toISOString() });
-    // Keep last 500 events
-    const trimmed = existing.slice(-500);
-    await ghWrite(`vault/${libId}/events.json`, trimmed, `libella: ingest event to ${libId}`);
+    await ghWrite(`events/${libId}/${today}.json`, existing, `libella: ingest event to ${libId}`);
   }
 
   async function ghDispatchRemoteGateway(ttlMinutes = 30) {
@@ -362,12 +427,12 @@ const VaultClient = (() => {
 
   // ── Compute vitals from raw events (pages mode only) ──
   function computeVitalsFromEvents(events) {
-    const metrics = events.filter(e => e.type === 'metric');
+    const metrics = events.filter(e => typeof e.value === 'number' || e.type === 'metric');
     if (metrics.length === 0) return { avg: 0, p50: 0, p95: 0, p99: 0, rps: 0, count: 0, errorCount: 0, errorRatePercent: 0, buckets: [] };
-    const latencies = metrics.map(e => e.value || 0).sort((a, b) => a - b);
+    const latencies = metrics.map(e => Number(e.value) || 0).sort((a, b) => a - b);
     const avg = Math.round(latencies.reduce((s, v) => s + v, 0) / latencies.length);
     const p = (pct) => latencies[Math.floor(latencies.length * pct / 100)] || 0;
-    const errors = metrics.filter(e => e.isError || (e.statusCode && e.statusCode >= 500));
+    const errors = events.filter(e => e.level === 'error' || e.level === 'fatal' || e.isError || (e.statusCode && e.statusCode >= 500));
     const rps = metrics.length > 0 ? (metrics.length / 3600).toFixed(2) : 0;
     // Build 12 time buckets
     const sorted = [...metrics].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
@@ -398,8 +463,8 @@ const VaultClient = (() => {
   }
 
   function computeFinOpsFromEvents(events, range) {
-    const costs = events.filter(e => e.type === 'cost' || e.type === 'ai_cost');
-    const totalCostUsd = costs.reduce((s, e) => s + (e.costUsd || 0), 0);
+    const costs = events.filter(e => e.costUsd !== undefined || e.type === 'cost' || e.type === 'ai_cost');
+    const totalCostUsd = costs.reduce((s, e) => s + (Number(e.costUsd) || 0), 0);
     const days = { '1h': 1/24, '24h': 1, '7d': 7, '30d': 30 }[range] || 1;
     const dailyCostUsd = (totalCostUsd / days).toFixed(4);
     const projectedMonthlyCostUsd = (Number(dailyCostUsd) * 30).toFixed(2);
@@ -408,13 +473,13 @@ const VaultClient = (() => {
     const byProvider = {};
     let totalIn = 0, totalOut = 0;
     for (const e of costs) {
-      const model = e.model || 'unknown';
-      const prov = e.provider || 'other';
+      const model = e.model || 'general_compute';
+      const prov = e.provider || 'custom';
       if (!byModel[model]) byModel[model] = { costUsd: 0, inputTokens: 0, outputTokens: 0 };
-      byModel[model].costUsd = parseFloat((byModel[model].costUsd + (e.costUsd || 0)).toFixed(6));
+      byModel[model].costUsd = parseFloat((byModel[model].costUsd + (Number(e.costUsd) || 0)).toFixed(6));
       byModel[model].inputTokens += e.inputTokens || 0;
       byModel[model].outputTokens += e.outputTokens || 0;
-      byProvider[prov] = parseFloat(((byProvider[prov] || 0) + (e.costUsd || 0)).toFixed(6));
+      byProvider[prov] = parseFloat(((byProvider[prov] || 0) + (Number(e.costUsd) || 0)).toFixed(6));
       totalIn += e.inputTokens || 0;
       totalOut += e.outputTokens || 0;
     }
