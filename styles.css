@@ -51,6 +51,7 @@ header.topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 2rem;
   padding: 0.65rem 1.6rem;
   background: rgba(6, 22, 12, 0.94);
   backdrop-filter: blur(24px);
@@ -64,7 +65,9 @@ header.topbar {
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.75rem;
+  margin-right: 1.5rem;
+  flex-shrink: 0;
 }
 
 .brand img.logo {
@@ -106,6 +109,7 @@ header.topbar {
   padding: 0.4rem 0.8rem;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
+  margin-left: 0.25rem;
 }
 
 .watchtower-selector label {
