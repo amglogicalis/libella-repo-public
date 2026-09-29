@@ -51,28 +51,45 @@ header.topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
-  padding: 0.65rem 1.6rem;
-  background: rgba(6, 22, 12, 0.94);
+  gap: 1rem;
+  padding: 0.5rem 1.4rem;
+  background: rgba(6, 22, 12, 0.96);
   backdrop-filter: blur(24px);
   border-bottom: 2px solid rgba(20, 219, 96, 0.42);
   box-shadow: 0 6px 32px rgba(20, 219, 96, 0.16);
   position: sticky;
   top: 0;
   z-index: 100;
+  width: 100%;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(20, 219, 96, 0.28);
+  margin: 0 0.1rem;
+  flex-shrink: 0;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-right: 1.5rem;
+  gap: 0.65rem;
+  margin-right: 0;
   flex-shrink: 0;
 }
 
 .brand img.logo {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
   box-shadow: 0 0 16px var(--primary-glow);
   border: 1.5px solid var(--primary);
@@ -97,45 +114,67 @@ header.topbar {
 .top-controls {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .watchtower-selector {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   background: var(--bg-surface);
   border: 1px solid var(--primary-border);
-  padding: 0.4rem 0.8rem;
+  padding: 0.3rem 0.6rem;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
-  margin-left: 0.25rem;
 }
 
 .watchtower-selector label {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
-.watchtower-selector select,
-#rangeSelect {
+.watchtower-selector select {
   width: auto !important;
-  max-width: 280px !important;
-  min-width: 180px !important;
+  max-width: 220px !important;
+  min-width: 130px !important;
   cursor: pointer;
   background: #05140a !important;
   border: 1px solid var(--primary-border) !important;
   color: #fff !important;
   border-radius: var(--radius-sm) !important;
-  padding: 0.35rem 0.65rem !important;
+  padding: 0.3rem 0.55rem !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#rangeSelect {
+  width: auto !important;
+  max-width: 135px !important;
+  min-width: 105px !important;
+  cursor: pointer;
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--primary-border) !important;
+  color: #fff !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 0.3rem 0.6rem !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  flex-shrink: 0;
 }
 
 .watchtower-selector .btn {
   flex-shrink: 0;
-  padding: 0.35rem 0.65rem;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.76rem;
 }
 
 select.clean-select {
@@ -201,25 +240,40 @@ select.clean-select option {
 /* NAVIGATION TABS */
 nav.tab-bar {
   display: flex;
-  gap: 0.6rem;
-  padding: 0.75rem 2rem;
-  background: rgba(4, 15, 8, 0.75);
+  gap: 0.45rem;
+  padding: 0.5rem 1.4rem;
+  background: rgba(4, 15, 8, 0.82);
   border-bottom: 1px solid var(--primary-border);
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(20, 219, 96, 0.3) transparent;
+}
+
+nav.tab-bar::-webkit-scrollbar {
+  height: 3px;
+}
+
+nav.tab-bar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+nav.tab-bar::-webkit-scrollbar-thumb {
+  background: rgba(20, 219, 96, 0.35);
+  border-radius: 3px;
 }
 
 .tab-btn {
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-gray);
-  padding: 0.5rem 1rem;
+  padding: 0.42rem 0.82rem;
   border-radius: var(--radius-sm);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   transition: var(--transition);
   white-space: nowrap;
 }
@@ -540,13 +594,14 @@ footer a {
 .user-profile-header {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.32rem 0.8rem;
-  background: rgba(14, 40, 24, 0.7);
+  gap: 0.55rem;
+  padding: 0.28rem 0.7rem;
+  background: rgba(14, 40, 24, 0.78);
   border: 1px solid var(--primary-border);
   border-radius: 999px;
   box-shadow: 0 0 14px rgba(20, 219, 96, 0.12);
   transition: var(--transition);
+  flex-shrink: 0;
 }
 
 .user-profile-header:hover {
@@ -555,25 +610,30 @@ footer a {
 }
 
 .user-avatar {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   object-fit: cover;
   border: 1.5px solid var(--primary);
   box-shadow: 0 0 10px rgba(20, 219, 96, 0.3);
+  flex-shrink: 0;
 }
 
 .user-profile-info {
   display: flex;
   flex-direction: column;
   line-height: 1.15;
+  max-width: 140px;
 }
 
 .user-name {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #fff;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .user-storage-tag {
@@ -581,22 +641,27 @@ footer a {
   font-family: var(--font-mono);
   color: var(--primary);
   opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .btn-logout {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.28rem 0.65rem;
+  gap: 0.25rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 6px;
   font-size: 0.72rem;
   font-weight: 600;
-  background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.4);
   color: #fca5a5;
   cursor: pointer;
   transition: var(--transition);
-  margin-left: 0.3rem;
+  margin-left: 0.25rem;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .btn-logout:hover {
@@ -604,6 +669,22 @@ footer a {
   border-color: var(--danger);
   color: #fff;
   box-shadow: 0 0 12px var(--danger-glow);
+}
+
+@media (max-width: 1100px) {
+  header.topbar {
+    padding: 0.45rem 0.9rem;
+    gap: 0.6rem;
+  }
+  .watchtower-selector label {
+    display: none;
+  }
+  .watchtower-selector select {
+    max-width: 150px !important;
+  }
+  .user-storage-tag {
+    display: none;
+  }
 }
 
 /* AUTH LOGIN OVERLAY MODAL */
