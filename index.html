@@ -8,32 +8,28 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=1.0.2">
 </head>
 <body>
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <div class="topbar-left">
-      <div class="brand">
-        <img src="assets/logo_libella.png" alt="Libella Logo" class="logo">
-        <div class="brand-text">
-          <h1>LIBELLA</h1>
-          <span id="consoleModeTag" style="display:none;"></span>
-        </div>
+    <div class="brand">
+      <img src="assets/logo_libella.png" alt="Libella Logo" class="logo">
+      <div class="brand-text">
+        <h1>LIBELLA</h1>
+        <span id="consoleModeTag" style="display:none;"></span>
       </div>
+    </div>
 
-      <div class="topbar-divider"></div>
-
-      <div class="watchtower-selector">
-        <label for="libellaSelect">Watchtower:</label>
-        <select id="libellaSelect" class="clean-select">
-          <option value="default">Default Watchtower</option>
-        </select>
-        <button id="btnNewWatchtower" class="btn btn-ghost btn-sm" title="Crear nueva Libella">+ Nueva</button>
-        <button id="btnEditWatchtower" class="btn btn-ghost btn-sm" title="Editar Watchtower actual">✏️</button>
-        <button id="btnDeleteWatchtower" class="btn btn-ghost btn-sm" title="Eliminar Watchtower actual" style="color:var(--danger);">🗑️</button>
-      </div>
+    <div class="watchtower-selector">
+      <label for="libellaSelect">Watchtower:</label>
+      <select id="libellaSelect" class="clean-select">
+        <option value="default">Default Watchtower</option>
+      </select>
+      <button id="btnNewWatchtower" class="btn btn-ghost btn-sm" title="Crear nueva Libella">+ Nueva</button>
+      <button id="btnEditWatchtower" class="btn btn-ghost btn-sm" title="Editar Watchtower actual">✏️</button>
+      <button id="btnDeleteWatchtower" class="btn btn-ghost btn-sm" title="Eliminar Watchtower actual" style="color:var(--danger);">🗑️</button>
     </div>
 
     <div class="top-controls">
