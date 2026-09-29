@@ -8,13 +8,13 @@
 
 <p align="center">
   <strong>$0 Real-Time Telemetry, Edge Time-Series & Multi-Cloud FinOps Engine</strong><br>
-  <em>Observabilidad Universal, Lentes Polimórficas (Ommatidia), Tetrapteryx & Circuit Breakers Autónomos</em>
+  <em>Observabilidad Universal, Lentes Polimórficas (Ommatidia), Tetrapteryx, AI Gateway & Circuit Breakers Autónomos</em>
 </p>
 
 <p align="center">
-  <a href="https://amglogicalis.github.io/libella-repo-public/"><img src="https://img.shields.io/badge/🌐_Web_Console-Live_24%2F7-14db60?style=for-the-badge" alt="Web Console Live" /></a>
-  <a href="https://amglogicalis.github.io/libella-repo-public/status.html"><img src="https://img.shields.io/badge/📊_Status_Page-Public-00e5ff?style=for-the-badge" alt="Status Page" /></a>
-  <a href="https://www.npmjs.com/package/terra-libella"><img src="https://img.shields.io/badge/NPM-terra--libella_v1.0.0-10b981?style=for-the-badge&logo=npm" alt="NPM Version" /></a>
+  <a href="https://amglogicalis.github.io/libella-repo-public/"><img src="https://img.shields.io/badge/🌐_Web_Console-Live_Online-14db60?style=for-the-badge" alt="Web Console Live" /></a>
+  <a href="https://amglogicalis.github.io/libella-repo-public/status.html"><img src="https://img.shields.io/badge/📊_Status_Page-30_Days_Uptime-00e5ff?style=for-the-badge" alt="Status Page" /></a>
+  <a href="https://www.npmjs.com/package/terra-libella"><img src="https://img.shields.io/badge/NPM-terra--libella_v1.0.1-10b981?style=for-the-badge&logo=npm" alt="NPM Version" /></a>
   <img src="https://img.shields.io/badge/Dependencies-0_Runtime-success?style=for-the-badge" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/Infrastructure-$0_Zero_Cost-brightgreen?style=for-the-badge" alt="Zero Cost" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" />
@@ -22,294 +22,323 @@
 
 ---
 
-## 🚀 Acceso Directo al Panóptico
+## 📸 Vista Previa de la Consola Web
+
+<p align="center">
+  <a href="https://amglogicalis.github.io/libella-repo-public/" target="_blank">
+    <img src="assets/libella_consola_preview.PNG" alt="Consola Web de Libella - Dashboard de Observabilidad y FinOps" width="100%" style="border-radius: 12px; border: 1px solid rgba(20, 219, 96, 0.35); box-shadow: 0 8px 32px rgba(20, 219, 96, 0.15);" />
+  </a>
+</p>
+
+<p align="center">
+  👉 <a href="https://amglogicalis.github.io/libella-repo-public/"><strong>Abrir Consola Web Online en Vivo</strong></a> · 
+  📊 <a href="https://amglogicalis.github.io/libella-repo-public/status.html"><strong>Ver Status Page Pública (30 Días de Uptime)</strong></a>
+</p>
+
+---
+
+## 🚀 Acceso Directo y Recursos
 
 | Recurso | Enlace Directo | Descripción |
 | :--- | :--- | :--- |
-| 🛸 **Consola Web Online** | [**Abrir Libella Studio**](https://amglogicalis.github.io/libella-repo-public/) | Dashboard interactivo en GitHub Pages para monitorizar métricas, logs y FinOps. |
-| 📊 **Página de Estado Pública** | [**Ver Status Page**](https://amglogicalis.github.io/libella-repo-public/status.html) | Semáforo de salud global, barra de uptime de 30 días e historial de incidentes. |
-| 📦 **Paquete Global NPM** | `npm install -g terra-libella` | CLI y SDK TypeScript isomórfico con cero dependencias en runtime. |
+| 🛸 **Consola Web Online** | [**amglogicalis.github.io/libella-repo-public**](https://amglogicalis.github.io/libella-repo-public/) | Dashboard interactivo en GitHub Pages para monitorizar métricas, logs, FinOps y breakers. |
+| 📊 **Status Page Pública** | [**amglogicalis.github.io/.../status.html**](https://amglogicalis.github.io/libella-repo-public/status.html) | Semáforo de salud global, barra interactiva de 30 días bloque a bloque y ciclo de incidentes. |
+| 📦 **Paquete Oficial NPM** | [`terra-libella` en npm](https://www.npmjs.com/package/terra-libella) | CLI autónoma y SDK TypeScript isomórfico con cero dependencias en runtime. |
 
 ---
 
-## 👁️ Visión y Metáfora Biológica
+## 👁️ ¿Qué es Libella y Cómo Funciona?
 
-En la industria actual, la monitorización de sistemas representa un impuesto oculto masivo: plataformas como Datadog, New Relic, Grafana Cloud o Dynatrace cobran tarifas exorbitantes simplemente por ingerir eventos, almacenar logs de series temporales y renderizar gráficas.
+En la industria actual, la monitorización representa un impuesto masivo: plataformas como Datadog, New Relic o Grafana Cloud cobran elevadas tarifas por ingerir eventos, guardar logs y pintar gráficas.
 
-**Libella** se inspira en la libélula (*Libellula* / *Odonata*), un prodigio evolutivo de la visión y la aerodinámica:
-* **Visión Omnidireccional de 360° (*Ommatidia Engine*)**: Más de 30.000 lentes hexagonales le otorgan percepción perimetral absoluta sin puntos ciegos.
-* **Cuatro Alas Asíncronas e Independientes (*Tetrapteryx*)**: Vuelo estacionario (*hovering*), maniobra instantánea y aceleración supersensible sin consumo energético en reposo.
-* **Depredación de Anomalías**: Detección de patrones y cortes de fugas presupuestarias a milisegundos de producirse.
-
-Libella elimina los servidores permanentes de ingesta y las bases de datos de pago: la telemetría se normaliza mediante **Lentes Polimórficas**, reside en caliente en el vault de Git (`.libella-storage`), se consolida en frío en **GitHub Releases** mediante el **Cronógrafo**, y se visualiza a 0ms en el Edge a **coste $0**.
-
----
-
-## 🏛️ Arquitectura del Sistema
-
-```
-                                  🛸 LIBELLA ENGINE
-                        (The Universal Edge Panopticon)
-                                       │
-        ┌──────────────────────────────┼──────────────────────────────┐
-        ▼                              ▼                              ▼
-  🛸 LAS LIBELLAS              👁️ OMMATIDIA ENGINE            🦅 TETRAPTERYX
-(Watchtowers Aisladas          (7 Lentes de Ingesta           (4 Cuadrantes de
-Multi-Proyecto/Entorno)         Polimórficas & OTLP)           Observabilidad)
-  • E-Commerce Prod              • CloudWatch / Azure / GCP     • 1. Vitals (Metrics)
-  • AI Agents Lab                • Vercel / Netlify / PaaS      • 2. Logs & Stream
-  • Terra Core Mesh              • Upstash / Data / Caching     • 3. FinOps & Costs
-  • Custom Watchtower            • AI & LLMOps (Token FinOps)   • 4. Pulse & Status
-                                 • OpenTelemetry (OTLP JSON)
-                                 • Terra Native Link
-                                 • BYOL (Custom Schema)
-                                       │
-        ┌──────────────────────────────┼──────────────────────────────┐
-        ▼                              ▼                              ▼
-  ⚡ CIRCUIT BREAKER            🗄️ EL CRONÓGRAFO              🖥️ PANOPTICON CONSOLE
-(Disyuntor Presupuestario     (Compresión Columnar           (Online GitHub Pages &
- & Alertas Agnósticas)         & Roll-ups Estadísticos)       Localhost Port Config)
-  • Generic Webhook POST         • Hot 24h Git Ingestion        • Zero-framework Vanilla
-  • GitHub Repo Dispatch         • Cold Releases Roll-ups       • Canvas/SVG Microcharts
-  • Discord / Slack / Telegram   • Zero runtime dependencies    • Dedicated Status Pages
-```
+**Libella** es el **Panóptico Universal** del [Ecosistema Terra](https://github.com/amglogicalis/Terra): un motor de observabilidad perimetral a **coste $0 perpetuo**:
+- **Almacenamiento Git Inmutable**: La telemetría en caliente de las últimas 24h reside en tu propio repositorio privado de GitHub (`.libella-storage`).
+- **El Cronógrafo (Compresión Columnar)**: Compacta automáticamente miles de registros diarios en rollups estadísticos ligeros (preservando p50, p95, p99 y costes), permitiendo almacenar años de historia en pocos megabytes.
+- **Sin Servidores Permanentes ni Bases de Datos de Pago**: Sin PostgreSQL, sin ClickHouse, sin clusters de Kubernetes.
+- **Aislamiento Multi-Tenant (Las Libellas / Watchtowers)**: Cada aplicación o entorno tiene su propio centinela con presupuestos independientes y su propia Status Page.
 
 ---
 
-## 🧩 Los Componentes Nucleares de Libella
+## 💻 Instalación y Primeros Pasos
 
-### 1. 🛸 Las Libellas (Watchtower Registry)
-Unidades de aislamiento multi-tenant y multi-proyecto. Cada **Libella** es un centinela independiente que vigila un producto o entorno:
-- **Identificador y Token Criptográfico Únicos**: `libellaId` y clave de ingesta `lbk_...` (HMAC SHA-256) para aislar la telemetría de diferentes clientes o servicios.
-- **Presupuestos y Techos Propios**: Límites de gasto diarios y mensuales en dólares.
-- **Status Page Dedicada**: Cada Libella puede generar y publicar su propia página de estado pública (`status.html?id=mi-watchtower`).
-
-### 2. 👁️ Ommatidia Engine (7 Lentes Polimórficas)
-Libella se adapta a cualquier emisor del mundo sin forzar esquemas rígidos:
-1. **Multi-Cloud Lens (AWS, GCP, Azure)**: Ingesta de métricas de CloudWatch, Azure Monitor y reportes de facturación (*Cost & Usage*).
-2. **PaaS & Serverless Lens (Vercel, Netlify, Railway, Cloudflare)**: Captura directa de *Log Drains*, tiempos de ejecución serverless y errores 5xx.
-3. **Data & Caching Lens (Upstash, Supabase, Neon, Redis)**: Monitorización de comandos por segundo y memoria consumida frente a cuotas de planes gratuitos.
-4. **AI & LLMOps Lens (OpenAI, Anthropic, Gemini, Groq, OpenRouter)**: Rastreo de tokens de entrada/salida y cálculo automático del coste exacto en dólares por modelo (`gpt-4o`, `claude-3-5-sonnet`, `gemini-1.5-pro`, etc.).
-5. **OpenTelemetry Lens (OTLP JSON)**: Compatibilidad directa con el estándar de la industria. Si tu backend en Go, Java o Python usa OTel, solo apuntas la URL de exportación a Libella.
-6. **Terra Native Lens**: Integración nativa con Formica, MockHive, Phryx, Syncada y Mantx.
-7. **BYOL (*Bring Your Own Logs*)**: Ingesta libre de cualquier JSON arbitrario con inferencia inteligente de campos.
-
-### 3. 🦅 Tetrapteryx (Los 4 Cuadrantes de Observabilidad)
-* **Vitals**: Latencia en percentiles (`p50`, `p90`, `p95`, `p99`), rendimiento (`RPS`), tasa de error (%) y gráficas continuas en Canvas con interpolación Bézier.
-* **Logs & Trazas**: Explorador estructurado con filtros por severidad (`DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`) y búsqueda en texto completo.
-* **FinOps & Cuotas**: Cuadro financiero unificado con gasto total, burn-rate diario, proyección mensual, tabla de modelos de IA y desglose por proveedor cloud.
-* **Pulse & Status Pages**: Detección de incidentes según SLOs, cálculo de uptime a 30 días y página pública de estado.
-
-### 4. ⚡ Circuit Breaker Autónomo (Disyuntor de Costes y Salud)
-Mecanismo de reacción defensiva **100% independiente y agnóstico** para evitar facturas sorpresa o cascadas de error:
-- **Reglas de Umbral**: e.g., `cost_daily_usd > 15.0`, `error_rate_percent > 10%`, `p95_latency_ms > 2000`.
-- **Action Hooks Despachados**:
-  - **Webhook HTTP Genérico**: Envía un `POST` firmado por HMAC a cualquier URL que definas (tu API en Vercel, un endpoint en Express, AWS Lambda) para activar modo mantenimiento o degradar servicios.
-  - **GitHub Repository Dispatch**: Despacha un evento nativo a GitHub Actions para pausar un runner o revocar claves temporales.
-  - **Alertas Enriquecidas**: Dispara notificaciones inmediatas a Discord, Slack o Telegram.
-
-### 5. 🗄️ El Cronógrafo & Almacenamiento Columnar Efímero ($0 Coste)
-- **Ventana Caliente (Últimas 24h)**: Registros JSON atómicos organizados por Libella en el repositorio `.libella-storage`.
-- **Roll-ups de Larga Duración**: Tareas periódicas del Cronógrafo agregan métricas por hora/día, calculan resúmenes estadísticos compactos y publican los bloques consolidados como **Releases de GitHub** usando la API REST nativa (`fetch`).
-- **Resultado**: El histórico anual ocupa megabytes mínimos, carga instantáneamente en la consola web y el almacenamiento es **$0 perpetuo**.
-
----
-
-## 💻 Instalación y Uso del CLI
-
-### Instalación Global
+### 1. Instalación Global de la CLI
 ```bash
 npm install -g terra-libella
-# o ejecuta directamente vía npx:
-npx terra-libella status
 ```
 
-### Comandos Principales
-
-#### 1. Diagnóstico del Vault
+*(O ejecútalo directamente sin instalar nada con `npx`):*
 ```bash
-libella doctor
-# o
-libella status
+npx terra-libella console
 ```
 
-#### 2. Gestión de Watchtowers (Las Libellas)
+### 2. Instalación en tu Proyecto (SDK)
 ```bash
-# Crear un nuevo centinela con presupuesto mensual
-libella create "E-Commerce Prod" --budget 75 --slug ecommerce-prod
+npm install terra-libella
+```
 
-# Listar watchtowers activos
+### 3. Autenticación (en orden de precedencia)
+Libella se conecta directamente a tu repositorio de almacenamiento `.libella-storage`:
+1. Flag en línea de comandos: `--pat <tu_token_de_github>`
+2. Variable de entorno: `LIBELLA_GITHUB_TOKEN=ghp_...`
+3. Variable estándar: `GITHUB_TOKEN=ghp_...`
+4. GitHub CLI (`gh auth token`, detectado automáticamente)
+5. **Modo 100% Offline / Local**: Si corres `libella console` en local sin token, opera con almacenamiento local inmediato.
+
+---
+
+## 🧭 Para Qué Sirve Cada Función y Cómo Usarla
+
+### 1. 🖥️ Consola Web (Local & Online)
+Inicia la consola web con interfaz dark glassmorphism y métricas en tiempo real:
+
+```bash
+# Iniciar en puerto por defecto (3377)
+libella console
+
+# Puerto personalizable (argumento posicional directo)
+libella console 4500
+
+# Con flag corto o largo y apertura automática en el navegador
+libella console -p 4500 --open
+libella console --port 4500 -o
+```
+* **Consola Web Local:** `http://127.0.0.1:4500`
+* **Status Page Local:** `http://127.0.0.1:4500/status.html`
+* **API REST Local:** `http://127.0.0.1:4500/api`
+
+---
+
+### 2. 🛸 Las Libellas (Gestión de Watchtowers)
+Un **Watchtower** es un centinela aislado que vigila un producto, microservicio o entorno:
+
+```bash
+# Crear un centinela con presupuesto mensual y diario
+libella create "E-Commerce Prod" --budget 100 --daily 10 --slug ecommerce-prod
+
+# Listar todos los watchtowers
 libella list
 
-# Inspeccionar configuración, claves y lentes
+# Inspeccionar configuración completa, claves y lentes montadas
 libella inspect ecommerce-prod
 
-# Eliminar un watchtower
+# Rotar la Ingest Key criptográfica (lbk_...) de forma segura
+libella rotate-key ecommerce-prod
+
+# Editar propiedades (presupuesto, nombre, visibilidad de status page)
+libella edit ecommerce-prod --budget 150 --daily 15
+
+# Eliminar un watchtower permanentemente
 libella delete ecommerce-prod
 ```
 
-#### 3. Montar Lentes (Ommatidia)
+---
+
+### 3. 👁️ Motor de Lentes Polimórficas (Ommatidia)
+Monta adaptadores para ingerir telemetría desde cualquier fuente:
+
+| Tipo de Lente | Fuente / Propósito |
+| :--- | :--- |
+| `cloud` | Métricas de AWS CloudWatch, Cost & Usage Reports (CUR), Azure y GCP. |
+| `vercel` | Drains de logs de Vercel en formato JSON para Serverless y Edge Middleware. |
+| `ai` | Rastreo de tokens y costes en tiempo real para OpenAI, Claude, Gemini, DeepSeek y Groq. |
+| `upstash` | Monitorización de comandos por segundo y memoria en Redis y Kafka serverless. |
+| `otlp` | Ingesta estándar de OpenTelemetry vía HTTP/JSON. |
+| `byol` | *"Bring Your Own Logs"*: Ingesta de cualquier JSON arbitrario con mapeo automático. |
+| `terra` | Conexión nativa con otras aplicaciones del ecosistema Terra. |
+
 ```bash
-# Montar lente de IA / LLMOps
-libella lens add ecommerce-prod --type ai --name "OpenAI & Claude LLMOps"
+# Montar lente de IA
+libella lens add ecommerce-prod --type ai --name "AI LLMOps Lens"
 
-# Montar lente de Vercel
-libella lens add ecommerce-prod --type vercel --name "Vercel Serverless"
+# Montar lente de Vercel Log Drains
+libella lens add ecommerce-prod --type vercel --name "Vercel Frontend"
 
-# Listar lentes activas
+# Listar lentes montadas
 libella lens list ecommerce-prod
-```
-
-#### 4. Ingesta de Telemetría
-```bash
-# Ingestar latencia
-libella ingest --libella ecommerce-prod --metric checkout_duration --val 135 --unit ms
-
-# Ingestar log estructurado
-libella ingest --libella ecommerce-prod --log "Payment captured successfully" --level info
-
-# Ingestar consumo de IA (calcula coste en dólares automáticamente)
-libella ingest --libella ecommerce-prod --ai --model gpt-4o --input 850 --output 210
-
-# Ingestar gasto cloud directo
-libella ingest --libella ecommerce-prod --cost 1.45 --provider aws
-```
-
-#### 5. Consultas de los 4 Cuadrantes (Tetrapteryx)
-```bash
-# Consultar métricas de latencia y percentiles
-libella query vitals --libella ecommerce-prod --range 24h
-
-# Consultar logs de error
-libella query logs --libella ecommerce-prod --level error
-
-# Consultar estado financiero FinOps
-libella query finops --libella ecommerce-prod --range 30d
-
-# Consultar estado de salud y uptime
-libella query pulse --libella ecommerce-prod
-```
-
-#### 6. Circuit Breakers (Disyuntores)
-```bash
-# Añadir regla de disyuntor por coste diario
-libella breaker add --libella ecommerce-prod --name "Tope Gasto Diario" \
-  --metric cost_daily_usd --op ">" --threshold 10 \
-  --action webhook --target "https://api.mi-tienda.com/emergency-throttle"
-
-# Listar reglas
-libella breaker list --libella ecommerce-prod
-
-# Evaluar reglas en caliente
-libella breaker eval --libella ecommerce-prod
-```
-
-#### 7. El Cronógrafo (Compresión $0)
-```bash
-# Ejecutar compresión columnar y roll-ups
-libella chronograph --libella ecommerce-prod
-```
-
-#### 8. Consola Web Localhost con Puerto Configurable
-```bash
-# Inicia la consola web local en el puerto por defecto (3377)
-libella console
-
-# Inicia en un puerto personalizado y abre el navegador
-libella console --port 4500 --open
 ```
 
 ---
 
-## 🛠️ Uso del SDK TypeScript (Zero-Dependencies)
+### 4. 📥 Ingestión de Telemetría Multidimensional
+Envía datos al centinela mediante la CLI o llamadas HTTP:
 
-El SDK de Libella es isomórfico y opera en Node.js, Deno, Bun, Cloudflare Workers, Next.js y Edge Runtimes:
+```bash
+# Métrica de rendimiento / latencia
+libella ingest --libella ecommerce-prod --metric api.response_time --val 145 --unit ms
+
+# Log estructurado con nivel de severidad y tags
+libella ingest --libella ecommerce-prod --log "Payment processed" --level info --tags env=prod --tags user=usr_99
+
+# Consumo de Inteligencia Artificial (calcula coste en dólares automáticamente)
+libella ingest --libella ecommerce-prod --ai --model gpt-4o --input 1500 --output 400 --provider openai
+
+# FinOps directo de infraestructura Cloud
+libella ingest --libella ecommerce-prod --cost 3.25 --provider aws --op compute
+
+# Pulso de salud del sistema
+libella ingest --libella ecommerce-prod --pulse operational --title "All Systems Nominal"
+```
+
+---
+
+### 5. 🦅 Consultas Directas (Tetrapteryx)
+Consulta la telemetría en tu terminal o en pipelines CI/CD con atajos directos y salida JSON:
+
+```bash
+# Vitals: Latencias (media, p50, p90, p95, p99), errores y RPS
+libella vitals ecommerce-prod --range 24h
+libella vitals ecommerce-prod --json
+
+# Logs: Filtro por severidad, fecha exacta (YYYY-MM-DD) o búsqueda de texto
+libella logs ecommerce-prod --level error
+libella logs ecommerce-prod --date 2026-09-29 --search "Payment failed"
+
+# FinOps: Gasto acumulado, desglose por proveedor y consumo de tokens
+libella finops ecommerce-prod --range 30d
+
+# Pulse: Estado global de salud y porcentaje de disponibilidad
+libella pulse ecommerce-prod
+```
+
+> **💡 Nota sobre el Rendimiento (RPS):**  
+> El RPS se calcula dividiendo el total de eventos entre los segundos totales de la ventana seleccionada (ej. 86.400 segundos en 24h). Con pocos eventos, el valor matemático exacto puede ser `0.00013 req/s`, mostrándose como `0.00` con 2 decimales. A mayor tráfico o en ventanas más cortas (1h), la cadencia sube naturalmente.
+
+---
+
+### 6. ⚡ Circuit Breakers Autónomos (Disyuntores de Coste & Salud)
+Protege tu infraestructura frente a bucles infinitos de IA, facturas descontroladas o tormentas de errores:
+
+```bash
+# Crear disyuntor que corta el servicio o avisa si el gasto diario supera $15
+libella breaker add --libella ecommerce-prod --name "Budget Limit" \
+  --metric cost_daily_usd --op ">" --threshold 15 \
+  --action webhook --target "https://hooks.slack.com/services/xxx"
+
+# Evaluar disyuntores manualmente en caliente
+libella breaker eval ecommerce-prod
+
+# Listar disyuntores activos
+libella breaker list ecommerce-prod
+```
+
+* **Hard Cutoff**: Cuando se activa, el AI Gateway intercepta peticiones entrantes y responde de inmediato con **HTTP 429 Too Many Requests**, impidiendo que se generen más costes.
+
+---
+
+### 7. 🤖 AI Gateway Universal ($0 Multi-Provider Proxy)
+Proxy inverso con interceptor de tokens para OpenAI, Anthropic, DeepSeek, Groq y OpenRouter:
+
+```bash
+# Iniciar el AI Gateway en local
+libella gateway --port 4578
+
+# Inyectar automáticamente las variables de entorno en tu archivo .env
+libella env --inject
+```
+
+Tu archivo `.env` queda configurado como drop-in transparente:
+```env
+OPENAI_BASE_URL=http://localhost:4578/v1/openai
+ANTHROPIC_BASE_URL=http://localhost:4578/v1/anthropic
+DEEPSEEK_BASE_URL=http://localhost:4578/v1/deepseek
+```
+*Tus aplicaciones continúan usando el SDK oficial de OpenAI o Anthropic sin cambios de código, mientras Libella registra y audita el 100% de los tokens y costes.*
+
+---
+
+### 8. 📊 Status Page Pública & Ciclo de Incidentes
+Página de estado pública interactiva (`status.html`) con barra de 30 días bloque a bloque y tooltip flotante:
+
+```bash
+# Declarar un incidente (degrada el estado a 'degraded' o 'outage')
+libella incident create --title "Latencia en Checkout" --severity major --libella ecommerce-prod
+
+# Resolver el incidente (restaura el estado automáticamente a 'operational')
+libella incident resolve incident_12345 --message "Problema de red mitigado" --libella ecommerce-prod
+```
+
+---
+
+### 9. 🗄️ El Cronógrafo (Compresión Columnar)
+```bash
+# Ejecutar compresión columnar y rollups diarios
+libella chronograph --libella ecommerce-prod
+
+# Modo simulación
+libella chronograph --dry-run
+```
+
+---
+
+## 🛠️ Uso del SDK en TypeScript / Node.js (Zero Dependencies)
 
 ```typescript
 import { Libella } from 'terra-libella';
 
-// 1. Inicializar cliente del Panóptico
-const libella = new Libella({
-  libellaId: 'ecommerce-prod',
-  vaultToken: process.env.GITHUB_PAT,
-  storageRepo: 'mi-org/.libella-storage'
-});
+// 1. Inicializar cliente (detecta automáticamente GitHub PAT o modo local)
+const libella = new Libella();
+await libella.init();
 
-// 2. Registrar métricas de rendimiento
-await libella.metric('order_checkout_ms', 142, { plan: 'enterprise', region: 'eu-west-1' });
+// 2. Registrar métrica de rendimiento
+await libella.metric('checkout.duration', 142, { route: '/api/pay', region: 'eu-west-1' });
 
-// 3. Registrar logs estructurados
-await libella.log('info', 'Order #98124 processed successfully', {
-  orderId: 'ord_98124',
-  amountUsd: 129.99
-});
+// 3. Registrar log estructurado
+await libella.log('info', 'Pedido completado con éxito', { orderId: 'ord_9871' });
 
-// 4. Registrar consumo FinOps de IA (Tokens & Coste dinámico)
+// 4. Registrar consumo FinOps de IA (Tokens & Costes automáticos)
 await libella.aiCost({
-  provider: 'openai',
   model: 'gpt-4o',
   inputTokens: 1200,
-  outputTokens: 380,
-  operation: 'order_summarizer'
+  outputTokens: 350,
+  provider: 'openai'
 });
 
-// 5. Consultar los 4 Cuadrantes programáticamente
+// 5. Registrar coste cloud directo
+await libella.cost('vercel', 2.40, { operation: 'compute' });
+
+// 6. Consultas programáticas
 const vitals = await libella.getVitals('24h');
-console.log(`Latencia p95: ${vitals.p95}ms, Tasa de error: ${vitals.errorRatePercent}%`);
+console.log(`Latencia p95: ${vitals.p95}ms | Errores: ${vitals.errorRatePercent}%`);
 
 const finops = await libella.getFinOps('30d');
-console.log(`Gasto acumulado: $${finops.totalCostUsd} USD (Media: $${finops.dailyCostUsd}/día)`);
+console.log(`Gasto total mensual: $${finops.totalCostUsd} USD`);
 
-// 6. Levantar consola web local programáticamente
+// 7. Levantar servidor local de consola web programáticamente
 const srv = await libella.startConsole({ port: 4800 });
-console.log(`Consola activa en: ${srv.url}`);
+console.log(`Consola web escuchando en: ${srv.url}`);
 ```
 
 ---
 
-## 🧪 Verificación E2E Real y Transparente
+## 🧪 Pruebas E2E de Ejecución Real (100% Verificadas)
 
-Libella incluye una suite de pruebas E2E que valida de forma 100% real cada componente contra el almacenamiento, el servidor HTTP y los disyuntores:
+Libella cuenta con suites completas de pruebas End-to-End sin simulaciones artificiales:
 
 ```bash
-node tests/e2e.test.js
+# Test de Consola Web y Status Page (Fases A, B, C, D, E)
+node tests/console_and_status_e2e.test.js
+
+# Test de Sincronización CLI, Consola y SDK
+node tests/sync_cli_console_sdk_e2e.test.js
 ```
 
-**Resultado de las pruebas de ejecución:**
+**Resultado de ejecución:**
 ```text
->>> Iniciando Batería de Pruebas E2E Reales de LIBELLA...
-
-1. Inicializando Storage Vault...
-   ✔ Storage Type: github-storage-vault (Online)
-2. Creando Watchtower de Prueba...
-   ✔ Watchtower Creado: ID=libella_e2e-sentinel_26944d16
-3. Montando Lentes Polimórficas...
-   ✔ Lentes montadas con éxito: [ai], [vercel]
-4. Ingestando Telemetría Multidimensional...
-   ✔ 4 cuadrantes ingeridos (Vitals, Logs, FinOps, Pulse).
-5. Consultando Métricas Agregadas (Tetrapteryx)...
-   ✔ Vitals: Avg=645ms, p50=125ms, p95=1950ms, Errors=1 (25%)
-   ✔ Logs [ERROR]: Encontradas 1 trazas (Esperado: 1)
-   ✔ FinOps: Gasto Total=$0.027 USD, Tokens Totales=4950
-     Desglose por Proveedor: { openai: 0.0075, anthropic: 0.0195 }
-   ✔ Pulse: Estado=DEGRADED, Uptime=100%
-6. Probando Circuit Breaker Autónomo...
-   ✔ Breaker creado: ID=cb_491912cc, Regla=error_count > 0
-   ✔ Evaluación de Disyuntor: Tripped=true (Val=1, Umbral=0)
-7. Probando Compresión del Cronógrafo...
-   ✔ Cronógrafo ejecutado: 1 rollup(s) generados
-8. Levantando Servidor Local de Consola Web en Puerto 4578...
-   ✔ Servidor levantado en: http://127.0.0.1:4578
-   ✔ GET /api/status HTTP 200 (App: LIBELLA)
-   ✔ POST /api/ingest HTTP 200 (Ingested: 1 events)
-9. Limpiando Watchtower de Prueba...
-   ✔ Watchtower eliminado correctamente.
-
-✔ TODAS LAS PRUEBAS E2E DE LIBELLA HAN PASADO EXITOSAMENTE (100% REALES).
+====================================================
+🚀 TEST E2E: CONSOLA, CLI Y SDK SINCRONIZADOS
+====================================================
+🧪 TEST 1: SDK startConsole({ port: 5165 }) -> 200 OK
+🧪 TEST 2: CLI Help & Sintaxis de puerto -> OK
+🧪 TEST 3: CLI Subproceso 'libella console 4899' -> 200 OK
+🧪 TEST 4: Creación de Watchtower y rotación de Ingest Key -> OK
+🧪 TEST 5: Ingestión completa (metric, log, ai, cost, pulse) -> OK
+🧪 TEST 6: Atajos directos (vitals, logs, finops, pulse) -> OK
+🧪 TEST 7: Ciclo de vida de Incidente (Create -> Degraded -> Resolve -> Operational) -> OK
+✅ TODAS LAS PRUEBAS E2E PASARON AL 100% SATISFACTORIAMENTE
 ```
 
 ---
 
 ## 📄 Licencia
 
-Publicado bajo licencia de código abierto **MIT**. Desarrollado bajo la filosofía del [Ecosistema Terra](https://github.com/amglogicalis/Terra) — Infraestructura Efímera de Coste $0.
+Publicado bajo licencia de código abierto **MIT**. Desarrollado con orgullo para el **[Ecosistema Terra](https://github.com/amglogicalis/Terra)** — Infraestructura Efímera de Coste $0.
