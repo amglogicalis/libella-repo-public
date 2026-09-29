@@ -570,12 +570,34 @@ const VaultClient = (() => {
   }
 
   function computePulseFromEvents(events) {
-    const pulses = events.filter(e => e.type === 'pulse' || e.status);
-    const last = pulses[pulses.length - 1];
+    const pulseEvents = events.filter(e => e.type === 'pulse' || e.type === 'incident' || (e.title && e.severity));
+    const resolvedIds = new Set(
+      events.filter(e => (e.type === 'pulse_resolve' || e.resolved === true) && (e.incidentId || e.id)).map(e => e.incidentId || e.id)
+    );
+
+    const activeIncidents = pulseEvents.filter(p => !p.resolved && !resolvedIds.has(p.id));
+    const historicalIncidents = pulseEvents.filter(p => p.resolved || resolvedIds.has(p.id)).map(p => {
+      const res = events.find(e => (e.type === 'pulse_resolve') && (e.incidentId === p.id));
+      return {
+        ...p,
+        resolved: true,
+        resolvedAt: p.resolvedAt || res?.resolvedAt || res?.timestamp || p.timestamp,
+        resolutionMessage: p.resolutionMessage || res?.resolutionMessage || 'Incidente resuelto satisfactoriamente',
+      };
+    });
+
+    let overallStatus = 'operational';
+    if (activeIncidents.some(i => i.severity === 'critical' || i.status === 'outage')) {
+      overallStatus = 'outage';
+    } else if (activeIncidents.length > 0) {
+      overallStatus = 'degraded';
+    }
+
     return {
-      overallStatus: last?.status || 'operational',
-      activeIncidents: [],
-      uptime: 100,
+      overallStatus,
+      activeIncidents,
+      historicalIncidents,
+      uptime: activeIncidents.length > 0 ? (overallStatus === 'outage' ? 95.0 : 99.2) : 100,
     };
   }
 
@@ -650,18 +672,36 @@ const VaultClient = (() => {
     },
     async getPulse(libId) {
       if (await detectMode()) return call('GET', `/api/libellas/${libId}/pulse`);
-      const events = await ghReadEvents(libId, '24h');
+      const events = await ghReadEvents(libId, '30d');
       return computePulseFromEvents(events);
     },
     async createIncident(libId, body) {
       if (await detectMode()) return call('POST', `/api/libellas/${libId}/incidents`, body);
       // In pages mode, store incident as a pulse event
-      const inc = { id: `inc_${Date.now()}`, ...body, timestamp: new Date().toISOString(), type: 'pulse', status: 'degraded' };
+      const inc = {
+        id: `inc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        title: body.title || 'Incidente detectado',
+        severity: body.severity || 'major',
+        status: body.severity === 'critical' ? 'outage' : 'degraded',
+        message: body.message || body.description || '',
+        timestamp: new Date().toISOString(),
+        type: 'pulse',
+        resolved: false,
+      };
       await ghAppendEvent(libId, inc);
       return inc;
     },
     async resolveIncident(libId, incId, message) {
       if (await detectMode()) return call('POST', `/api/libellas/${libId}/incidents/${incId}/resolve`, { message });
+      const resolveEvent = {
+        id: `res_${Date.now()}`,
+        incidentId: incId,
+        type: 'pulse_resolve',
+        resolved: true,
+        resolvedAt: new Date().toISOString(),
+        resolutionMessage: message || 'Incidente resuelto satisfactoriamente',
+      };
+      await ghAppendEvent(libId, resolveEvent);
       return { success: true };
     },
     async listBreakers(libId) {
@@ -824,6 +864,7 @@ function setupTabs() {
     currentLibellaId = libellaSelect.value;
     localStorage.setItem('libella_current_id', currentLibellaId);
     updateConfigTab();
+    updateStatusPageLinks();
     refreshAll();
   });
 
@@ -865,6 +906,7 @@ async function loadWatchtowers() {
       if (libellaSelect) libellaSelect.value = 'default';
       updateConfigTab();
     }
+    updateStatusPageLinks();
   } catch (err) {
     console.warn('loadWatchtowers error', err);
     if (!activeLibellas || activeLibellas.length === 0) {
@@ -878,7 +920,24 @@ async function loadWatchtowers() {
       if (libellaSelect) libellaSelect.value = 'default';
       updateConfigTab();
     }
+    updateStatusPageLinks();
   }
+}
+
+function updateStatusPageLinks() {
+  const current = activeLibellas.find(w => w.id === currentLibellaId) || activeLibellas[0];
+  if (!current) return;
+  const slug = current.statusPageSlug || current.slug || current.id || 'default';
+  const targetHref = `status.html?id=${encodeURIComponent(slug)}`;
+
+  localStorage.setItem('libella_current_id', current.id);
+  localStorage.setItem('libella_current_slug', slug);
+
+  const topLink = document.getElementById('topbarStatusPageLink');
+  if (topLink) topLink.href = targetHref;
+
+  const btnOpen = document.getElementById('btnOpenStatusPage');
+  if (btnOpen) btnOpen.href = targetHref;
 }
 
 async function refreshAll(showLoading = true) {
@@ -1763,11 +1822,12 @@ function updateConfigTab() {
   if (statusAccess) statusAccess.value = current.statusPageAccess || 'public';
 
   const openLink = document.getElementById('btnOpenStatusPage');
+  const topStatusLink = document.getElementById('topbarStatusPageLink');
   const updateStatusLink = () => {
-    if (openLink) {
-      const slugVal = slugEl?.value.trim() || current.statusPageSlug || current.slug || current.id;
-      openLink.href = `status.html?id=${encodeURIComponent(slugVal)}`;
-    }
+    const slugVal = slugEl?.value.trim() || current.statusPageSlug || current.slug || current.id;
+    const targetHref = `status.html?id=${encodeURIComponent(slugVal)}`;
+    if (openLink) openLink.href = targetHref;
+    if (topStatusLink) topStatusLink.href = targetHref;
   };
   updateStatusLink();
   if (slugEl) slugEl.oninput = updateStatusLink;

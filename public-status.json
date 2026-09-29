@@ -1,0 +1,19 @@
+{
+  "updatedAt": "2026-09-29T13:25:00.000Z",
+  "watchtowers": [
+    {
+      "id": "wt_production",
+      "name": "Production API & Gateway",
+      "slug": "production",
+      "statusPageSlug": "production",
+      "environment": "production",
+      "statusPageEnabled": true,
+      "statusPageAccess": "public",
+      "mountedLenses": [
+        { "id": "lens_fastify", "type": "fastify", "name": "Fastify Core Gateway", "enabled": true },
+        { "id": "lens_cloud", "type": "cloud", "name": "Cloud Provider FinOps", "enabled": true },
+        { "id": "lens_openai", "type": "openai", "name": "AI Inference Bridge", "enabled": true }
+      ]
+    }
+  ]
+}

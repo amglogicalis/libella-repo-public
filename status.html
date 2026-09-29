@@ -10,210 +10,865 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <style>
+    :root {
+      --status-green: #14db60;
+      --status-yellow: #f59e0b;
+      --status-red: #ef4444;
+      --status-idle: rgba(20, 219, 96, 0.28);
+    }
+    body {
+      background: #050e08;
+      color: var(--text-main);
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
     .status-container {
-      max-width: 860px;
-      margin: 2.5rem auto;
+      max-width: 900px;
+      margin: 2rem auto;
       padding: 0 1.5rem;
+      width: 100%;
+      box-sizing: border-box;
+      flex: 1;
+    }
+    .status-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.8rem;
+      background: rgba(10, 26, 16, 0.7);
+      border-bottom: 1px solid var(--primary-border);
+      backdrop-filter: blur(12px);
+    }
+    .status-select {
+      background: var(--bg-surface);
+      border: 1px solid var(--primary-border);
+      color: #fff;
+      padding: 0.4rem 0.8rem;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+    }
+    .status-select:focus {
+      border-color: var(--primary);
+    }
+    .live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0.65rem;
+      background: rgba(20, 219, 96, 0.12);
+      border: 1px solid rgba(20, 219, 96, 0.35);
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 0.04em;
+    }
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary);
+      animation: pulse-live 2s infinite ease-in-out;
+    }
+    @keyframes pulse-live {
+      0% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 12px var(--primary); }
+      100% { transform: scale(0.9); opacity: 0.7; }
+    }
+    .uptime-container {
+      position: relative;
+      margin-top: 1.5rem;
+      padding-top: 0.5rem;
+    }
+    .uptime-bar {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0.4rem 0;
+    }
+    .uptime-block {
+      flex: 1;
+      height: 32px;
+      border-radius: 3px;
+      background: var(--status-green);
+      transition: transform 0.12s ease, filter 0.12s ease;
+      cursor: pointer;
+    }
+    .uptime-block:hover {
+      transform: scaleY(1.28);
+      filter: brightness(1.25);
+    }
+    .uptime-block.operational { background: var(--status-green); }
+    .uptime-block.degraded { background: var(--status-yellow); }
+    .uptime-block.outage { background: var(--status-red); }
+    .uptime-block.idle {
+      background: var(--status-idle);
+      border: 1px dashed rgba(20, 219, 96, 0.5);
+    }
+    .uptime-tooltip {
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(5, 14, 8, 0.95);
+      border: 1px solid var(--primary-border);
+      backdrop-filter: blur(12px);
+      padding: 0.6rem 0.9rem;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      color: #fff;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease, transform 0.1s ease;
+      z-index: 100;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+      text-align: left;
+    }
+    .uptime-tooltip.visible {
+      opacity: 1;
+    }
+    .uptime-legend {
+      display: flex;
+      justify-content: center;
+      gap: 1.2rem;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.8rem;
+      flex-wrap: wrap;
+    }
+    .uptime-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+    .subsystem-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: var(--bg-surface);
+      transition: background 0.15s ease;
+    }
+    .subsystem-item:hover {
+      background: rgba(20, 219, 96, 0.04);
+    }
+    .subsystem-item:last-child {
+      border-bottom: none;
     }
     .incident-card {
       background: var(--bg-surface);
       border: 1px solid var(--primary-border);
       border-radius: var(--radius-sm);
-      padding: 1rem 1.2rem;
-      margin-bottom: 0.8rem;
+      padding: 1.1rem 1.3rem;
+      margin-bottom: 0.9rem;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 2.2rem 1.5rem;
+      color: var(--text-gray);
     }
   </style>
 </head>
 <body>
 
-  <header class="topbar" style="justify-content:center;">
-    <div class="brand">
-      <img src="assets/logo_libella.png" alt="Libella Logo" class="logo">
+  <!-- TOP HEADER -->
+  <header class="status-header-bar">
+    <div class="brand" style="display:flex; align-items:center; gap:0.8rem;">
+      <a href="index.html" title="Volver a la Consola Libella" style="display:flex; align-items:center; text-decoration:none;">
+        <img src="assets/logo_libella.png" alt="Libella Logo" class="logo" style="width:34px; height:34px;">
+      </a>
       <div class="brand-text">
-        <h1 id="statusTitle">PANOPTICON SYSTEM STATUS</h1>
-        <p>Monitorizado en tiempo real por Libella ($0 Infrastructure)</p>
+        <h1 id="statusTitle" style="font-size:1.05rem; font-weight:800; letter-spacing:0.02em; margin:0; color:#fff;">
+          PANOPTICON SYSTEM STATUS
+        </h1>
+        <p style="margin:0; font-size:0.72rem; color:var(--text-gray);">
+          Telemetría en tiempo real por Libella ($0 Infrastructure)
+        </p>
       </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:0.8rem;">
+      <div id="wtSwitcherContainer" style="display:none; align-items:center; gap:0.4rem;">
+        <span style="font-size:0.75rem; color:var(--text-gray);">Servicio:</span>
+        <select id="statusWatchtowerSelect" class="status-select" title="Seleccionar Watchtower"></select>
+      </div>
+      <div class="live-pill" title="Monitorización activa en tiempo real">
+        <span class="pulse-dot"></span> EN VIVO
+      </div>
+      <button id="btnRefreshStatus" class="btn btn-ghost btn-sm" title="Refrescar métricas ahora" style="padding:0.35rem 0.6rem;">
+        🔄
+      </button>
+      <a href="index.html" class="btn btn-ghost btn-sm" title="Ir a la Consola de Administración" style="font-size:0.78rem; text-decoration:none;">
+        ⚙️ Consola
+      </a>
     </div>
   </header>
 
-  <div class="status-container">
+  <!-- MAIN STATUS CONTENT -->
+  <div class="status-container" id="statusMainContainer">
+
+    <!-- HERO STATUS BANNER -->
     <div class="status-hero" id="statusHero">
-      <div class="status-badge-giant" id="statusBadge" style="background:rgba(20,219,96,0.2); color:var(--primary); border:1px solid var(--primary-border);">
-        <span style="font-size:1.5rem;">✔</span> TODOS LOS SISTEMAS OPERATIVOS
+      <div class="status-badge-giant" id="statusBadge" style="background:rgba(20,219,96,0.18); color:var(--primary); border:1px solid var(--primary-border);">
+        <span style="font-size:1.4rem;">✔</span> TODOS LOS SISTEMAS OPERATIVOS
       </div>
-      <p style="color:var(--text-muted); font-size:0.9rem;" id="statusSubtitle">
-        Rendimiento global óptimo. Sin incidentes activos reportados.
+      <p style="color:var(--text-muted); font-size:0.92rem; margin:0.4rem 0 1.2rem;" id="statusSubtitle">
+        Rendimiento global óptimo. Sin degradaciones ni anomalías activas.
       </p>
 
-      <div class="uptime-bar" id="uptimeBar"></div>
-      <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-gray); margin-top:0.6rem;">
+      <!-- 30-DAY UPTIME BAR -->
+      <div class="uptime-container">
+        <div class="uptime-tooltip" id="uptimeTooltip"></div>
+        <div class="uptime-bar" id="uptimeBar"></div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; font-size:0.76rem; color:var(--text-gray); margin-top:0.6rem;">
         <span>Hace 30 días</span>
-        <span id="uptimePercentText" style="color:var(--primary); font-weight:700;">100.0% Uptime</span>
+        <span id="uptimePercentText" style="color:var(--primary); font-weight:700; font-size:0.82rem;">100.0% Uptime</span>
         <span>Hoy</span>
       </div>
-    </div>
 
-    <!-- METRICS SNAPSHOT -->
-    <div class="grid-cards" style="grid-template-columns:repeat(3, 1fr); margin-bottom:2rem;">
-      <div class="card" style="text-align:center;">
-        <div class="card-label" style="justify-content:center;">Latencia Media</div>
-        <div class="card-value" id="snapAvgLatency" style="font-size:1.5rem;">0 ms</div>
-      </div>
-      <div class="card" style="text-align:center;">
-        <div class="card-label" style="justify-content:center;">Latencia p95</div>
-        <div class="card-value" id="snapP95Latency" style="font-size:1.5rem; color:var(--primary);">0 ms</div>
-      </div>
-      <div class="card" style="text-align:center;">
-        <div class="card-label" style="justify-content:center;">Tasa de Éxito</div>
-        <div class="card-value" id="snapSuccessRate" style="font-size:1.5rem; color:#38ef7d;">100%</div>
-      </div>
-    </div>
-
-    <!-- INCIDENTS -->
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title"><span>📋</span> Registro Histórico de Incidentes</div>
-        <span class="badge badge-success" id="incidentsCount">0 incidentes</span>
-      </div>
-      <div id="incidentsList">
-        <div style="color:var(--text-gray); text-align:center; padding:1.5rem;">
-          No se han registrado incidentes en los últimos 30 días.
+      <div class="uptime-legend">
+        <div class="uptime-legend-item">
+          <span class="legend-dot" style="background:var(--status-green);"></span>
+          <span>Operativo (100%)</span>
+        </div>
+        <div class="uptime-legend-item">
+          <span class="legend-dot" style="background:var(--status-yellow);"></span>
+          <span>Rendimiento Degradado</span>
+        </div>
+        <div class="uptime-legend-item">
+          <span class="legend-dot" style="background:var(--status-red);"></span>
+          <span>Interrupción</span>
+        </div>
+        <div class="uptime-legend-item">
+          <span class="legend-dot" style="background:var(--status-idle); border:1px dashed rgba(20,219,96,0.5);"></span>
+          <span>Sin Actividad Registrada</span>
         </div>
       </div>
     </div>
+
+    <!-- METRICS SNAPSHOT (4 CARDS) -->
+    <div class="grid-cards" style="grid-template-columns:repeat(4, 1fr); margin-bottom:2rem;">
+      <div class="card" style="text-align:center;">
+        <div class="card-label" style="justify-content:center;">Latencia Media (30d)</div>
+        <div class="card-value" id="snapAvgLatency" style="font-size:1.45rem;">0 ms</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="card-label" style="justify-content:center;">Latencia p95</div>
+        <div class="card-value" id="snapP95Latency" style="font-size:1.45rem; color:var(--primary);">0 ms</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="card-label" style="justify-content:center;">Tasa de Éxito</div>
+        <div class="card-value" id="snapSuccessRate" style="font-size:1.45rem; color:#38ef7d;">100%</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="card-label" style="justify-content:center;">Peticiones Totales</div>
+        <div class="card-value" id="snapTotalOps" style="font-size:1.45rem; color:#38bdf8;">0 ops</div>
+      </div>
+    </div>
+
+    <!-- ACTIVE INCIDENTS (IF ANY) -->
+    <div id="activeIncidentsBanner" style="display:none; margin-bottom:2rem;">
+      <div class="panel" style="border:1px solid rgba(239,68,68,0.4); background:rgba(239,68,68,0.06);">
+        <div class="panel-header" style="border-bottom:1px solid rgba(239,68,68,0.2);">
+          <div class="panel-title" style="color:#ef4444;"><span style="animation:pulse-live 1.5s infinite;">🚨</span> Incidentes Activos en Curso</div>
+          <span class="badge" style="background:#ef4444; color:#000;" id="activeIncidentsCount">1 activo</span>
+        </div>
+        <div id="activeIncidentsContent" style="padding:1rem;"></div>
+      </div>
+    </div>
+
+    <!-- SUBSYSTEMS & LENSES HEALTH BREAKDOWN -->
+    <div class="panel" style="margin-bottom:2rem;">
+      <div class="panel-header">
+        <div class="panel-title"><span>🛡️</span> Estado de Componentes y Pasarelas</div>
+        <span class="badge badge-success" id="componentsHealthBadge">Operativos</span>
+      </div>
+      <div id="subsystemsList" style="border-radius:0 0 var(--radius-sm) var(--radius-sm); overflow:hidden;">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- INCIDENTS HISTORY -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span>📋</span> Registro Histórico de Incidentes (Últimos 30 días)</div>
+        <span class="badge badge-success" id="incidentsCount">0 incidentes</span>
+      </div>
+      <div id="incidentsList">
+        <div class="empty-state">
+          ✔ Todos los sistemas han operado con total normalidad y sin incidentes en los últimos 30 días.
+        </div>
+      </div>
+    </div>
+
   </div>
 
+  <!-- ACCESS RESTRICTED SCREEN (HIDDEN BY DEFAULT) -->
+  <div class="status-container" id="restrictedContainer" style="display:none; text-align:center; margin-top:4rem;">
+    <div class="panel" style="padding:3rem 2rem; max-width:600px; margin:0 auto; border:1px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.03);">
+      <div style="font-size:3rem; margin-bottom:1rem;">🔒</div>
+      <h2 id="restrictedTitle" style="color:#ef4444; font-size:1.4rem; font-weight:800; margin-bottom:0.8rem;">
+        Página de Estado Restringida
+      </h2>
+      <p id="restrictedMsg" style="color:var(--text-muted); font-size:0.92rem; line-height:1.6; margin-bottom:1.8rem;">
+        El acceso público a esta página de estado ha sido desactivado por el administrador de Libella.
+      </p>
+      <a href="index.html" class="btn btn-primary btn-sm" style="text-decoration:none;">
+        Volver a la Consola
+      </a>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
   <footer>
-    Página de Estado Pública • Generada automáticamente por <a href="index.html">Libella</a> • Filosofía Terra
+    Página de Estado Oficial • Monitorizado en tiempo real por <a href="index.html" style="color:var(--primary); text-decoration:none; font-weight:700;">Libella</a> ($0 Infrastructure) • Filosofía Terra
   </footer>
 
   <script>
-    async function loadStatus() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const libellaId = urlParams.get('id') || 'default';
+    let allWatchtowers = [];
+    let currentTarget = null;
+    let refreshTimer = null;
 
+    /** Main Initialization */
+    async function initStatusPage() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let requestedId = urlParams.get('id') || urlParams.get('slug');
+
+      // 1. Discover watchtowers
+      allWatchtowers = await discoverWatchtowers();
+
+      // 2. Select the matching or default watchtower
+      if (allWatchtowers.length > 0) {
+        if (requestedId && requestedId !== 'default') {
+          currentTarget = allWatchtowers.find(w => 
+            w.statusPageSlug === requestedId || w.slug === requestedId || w.id === requestedId
+          );
+        }
+        if (!currentTarget) {
+          const savedSlug = localStorage.getItem('libella_current_slug');
+          const savedId = localStorage.getItem('libella_current_id');
+          if (savedSlug || savedId) {
+            currentTarget = allWatchtowers.find(w => 
+              w.statusPageSlug === savedSlug || w.slug === savedSlug || w.id === savedId
+            );
+          }
+        }
+        if (!currentTarget) {
+          currentTarget = allWatchtowers[0];
+        }
+      }
+
+      // 3. Fallback if zero watchtowers found in registry/server
+      if (!currentTarget) {
+        const fallbackSlug = (requestedId && requestedId !== 'default') ? requestedId : 'production';
+        currentTarget = {
+          id: fallbackSlug,
+          name: formatTitle(fallbackSlug),
+          slug: fallbackSlug,
+          statusPageSlug: fallbackSlug,
+          statusPageEnabled: true,
+          statusPageAccess: 'public',
+          mountedLenses: [],
+        };
+        allWatchtowers = [currentTarget];
+      }
+
+      // Update URL silently to reflect current slug
+      const realSlug = currentTarget.statusPageSlug || currentTarget.slug || currentTarget.id;
+      if (urlParams.get('id') !== realSlug) {
+        const newUrl = `${window.location.pathname}?id=${encodeURIComponent(realSlug)}`;
+        window.history.replaceState({ id: realSlug }, '', newUrl);
+      }
+
+      // Setup Watchtower Dropdown Switcher
+      setupWatchtowerDropdown();
+
+      // Check Access Permissions
+      const isOwner = !!localStorage.getItem('libella_vault_pat');
+      if (currentTarget.statusPageEnabled === false || currentTarget.statusPageAccess === 'disabled') {
+        showRestricted('PÁGINA DE ESTADO DESHABILITADA', 'El acceso público a esta página de estado ha sido desactivado por el administrador del Watchtower.');
+        return;
+      }
+      if (currentTarget.statusPageAccess === 'private' && !isOwner) {
+        showRestricted('PÁGINA DE ESTADO PRIVADA', 'Esta página de estado está restringida exclusivamente para uso interno de la organización.');
+        return;
+      }
+
+      // Load Telemetry Data
+      await loadTelemetryForTarget(currentTarget);
+
+      // Auto-refresh every 60s
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = setInterval(() => {
+        loadTelemetryForTarget(currentTarget, false);
+      }, 60000);
+    }
+
+    /** Discover Watchtowers from Server API, GitHub Vault, or static snapshot */
+    async function discoverWatchtowers() {
+      // A. Try Server API
       try {
-        const res = await fetch(`/api/libellas/${libellaId}/pulse`);
-        if (res.ok) {
-          const data = await res.json();
-          renderStatus(data);
-          return;
+        const r = await fetch('/api/libellas');
+        if (r.ok) {
+          const data = await r.json();
+          if (Array.isArray(data) && data.length > 0) return data;
         }
       } catch {}
 
-      // Direct GitHub / Pages Mode fallback
-      try {
-        const repo = localStorage.getItem('libella_vault_repo');
-        const pat = localStorage.getItem('libella_vault_pat');
-        if (repo && pat) {
+      // B. Try LocalStorage Vault PAT
+      const repo = localStorage.getItem('libella_vault_repo');
+      const pat  = localStorage.getItem('libella_vault_pat');
+      if (repo && pat) {
+        try {
           const regRes = await fetch(`https://api.github.com/repos/${repo}/contents/registry.json`, {
             headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github.v3.raw' }
           });
           if (regRes.ok) {
             const list = await regRes.json();
-            const wt = list.find(w => w.statusPageSlug === libellaId || w.slug === libellaId || w.id === libellaId);
-            if (wt) {
-              const targetId = wt.id;
-              const today = new Date().toISOString().slice(0, 10);
-              const evRes = await fetch(`https://api.github.com/repos/${repo}/contents/events/${targetId}/${today}.json`, {
-                headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github.v3.raw' }
-              }).catch(() => null);
-              const events = evRes && evRes.ok ? await evRes.json() : [];
-              const metrics = events.filter(e => typeof e.value === 'number' || e.type === 'metric');
-              const latencies = metrics.map(e => Number(e.value) || 0).sort((a,b)=>a-b);
-              const avg = latencies.length ? Math.round(latencies.reduce((a,b)=>a+b,0)/latencies.length) : 0;
-              const p95 = latencies.length ? (latencies[Math.floor(latencies.length * 0.95)] || 0) : 0;
-              const errors = events.filter(e => e.level === 'error' || (e.statusCode && e.statusCode >= 500));
-              const errPct = metrics.length ? Math.round((errors.length / metrics.length) * 100) : 0;
-              renderStatus({
-                libellaId: targetId,
-                name: wt.name,
-                slug: wt.statusPageSlug || wt.slug || wt.id,
-                overallStatus: errPct > 20 ? 'outage' : (errPct > 5 || p95 > 2000 ? 'degraded' : 'operational'),
-                uptimePercent30d: 100,
-                statusPageEnabled: wt.statusPageEnabled !== false,
-                statusPageAccess: wt.statusPageAccess || 'public',
-                vitalsSnapshot: { avgLatencyMs: avg, p95LatencyMs: p95, errorRatePercent: errPct },
-                activeIncidents: []
-              });
-              return;
-            }
+            if (Array.isArray(list) && list.length > 0) return list;
+          }
+        } catch {}
+      }
+
+      // C. Try public snapshot fallback
+      try {
+        const pubRes = await fetch('public-status.json');
+        if (pubRes.ok) {
+          const pubData = await pubRes.json();
+          if (Array.isArray(pubData)) return pubData;
+          if (pubData.watchtowers) return pubData.watchtowers;
+        }
+      } catch {}
+
+      return [];
+    }
+
+    /** Setup the dropdown in the header bar */
+    function setupWatchtowerDropdown() {
+      const container = document.getElementById('wtSwitcherContainer');
+      const select = document.getElementById('statusWatchtowerSelect');
+      if (!container || !select) return;
+
+      if (allWatchtowers.length > 1) {
+        container.style.display = 'inline-flex';
+        select.innerHTML = '';
+        allWatchtowers.forEach(w => {
+          const opt = document.createElement('option');
+          opt.value = w.statusPageSlug || w.slug || w.id;
+          opt.textContent = `${w.name} (${w.statusPageSlug || w.slug || w.id})`;
+          if (w.id === currentTarget.id) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        select.onchange = (e) => {
+          const chosenSlug = e.target.value;
+          const found = allWatchtowers.find(w => (w.statusPageSlug || w.slug || w.id) === chosenSlug);
+          if (found) {
+            currentTarget = found;
+            const newUrl = `${window.location.pathname}?id=${encodeURIComponent(chosenSlug)}`;
+            window.history.pushState({ id: chosenSlug }, '', newUrl);
+            loadTelemetryForTarget(currentTarget, true);
+          }
+        };
+      } else {
+        container.style.display = 'none';
+      }
+    }
+
+    /** Load and Calculate Telemetry for the chosen Watchtower */
+    async function loadTelemetryForTarget(target, showSpinner = true) {
+      document.getElementById('statusTitle').innerText = (target.name || target.id).toUpperCase() + ' — SYSTEM STATUS';
+
+      // 1. Try Server API Mode
+      try {
+        const pulseRes = await fetch(`/api/libellas/${target.id}/pulse`);
+        if (pulseRes.ok) {
+          const pulseData = await pulseRes.json();
+          // If server provided dayBuckets, use them directly
+          if (pulseData.dayBuckets && pulseData.dayBuckets.length === 30) {
+            renderStatus(target, pulseData);
+            return;
           }
         }
       } catch {}
 
-      // Fallback display
-      renderFallback(libellaId);
-    }
+      // 2. Try GitHub Vault Mode (via PAT if logged in, or anonymous raw events)
+      const repo = localStorage.getItem('libella_vault_repo');
+      const pat  = localStorage.getItem('libella_vault_pat');
+      if (repo && pat) {
+        try {
+          const filesRes = await fetch(`https://api.github.com/repos/${repo}/contents/events/${target.id}`, {
+            headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github.v3+json' }
+          });
+          if (filesRes.ok) {
+            const files = await filesRes.json();
+            if (Array.isArray(files)) {
+              const now = Date.now();
+              const dateFiles = files.filter(f => {
+                if (!f.name.endsWith('.json')) return false;
+                const dateKey = f.name.replace('.json', '');
+                const t = new Date(dateKey).getTime();
+                return !isNaN(t) && (now - t) <= 32 * 86400000;
+              });
 
-    function renderStatus(data) {
-      if (data.statusPageEnabled === false || data.statusPageAccess === 'disabled' || data.statusPageAccess === 'private') {
-        document.getElementById('statusTitle').innerText = (data.name || data.libellaId).toUpperCase() + ' — STATUS PAGE';
-        const badge = document.getElementById('statusBadge');
-        const sub = document.getElementById('statusSubtitle');
-        badge.innerHTML = '<span>🔒</span> PÁGINA DE ESTADO PRIVADA O DESHABILITADA';
-        badge.style.background = 'rgba(239,68,68,0.15)';
-        badge.style.color = '#ef4444';
-        badge.style.border = '1px solid rgba(239,68,68,0.3)';
-        sub.innerHTML = 'El acceso público a esta página de estado ha sido desactivado por el administrador del Watchtower.<br>Para habilitarla, edita la configuración del Watchtower en la consola de Libella.';
-        document.getElementById('uptimeBar').style.display = 'none';
-        document.querySelector('.grid-cards').style.display = 'none';
-        document.getElementById('incidentsList').innerHTML = '<div style="color:var(--text-gray); text-align:center; padding:1.5rem;">Información restringida.</div>';
-        return;
+              const fetchPromises = dateFiles.map(f =>
+                fetch(`https://api.github.com/repos/${repo}/contents/${f.path}`, {
+                  headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github.v3.raw' }
+                }).then(r => r.ok ? r.json() : []).catch(() => [])
+              );
+
+              const dayArrays = await Promise.all(fetchPromises);
+              const allEvents = dayArrays.flat();
+              const report = build30DayReport(target, allEvents);
+              renderStatus(target, report);
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn('GitHub events error in status.html:', err);
+        }
       }
 
-      document.getElementById('statusTitle').innerText = (data.name || data.libellaId).toUpperCase() + ' — SYSTEM STATUS';
+      // 3. Fallback clean baseline (No events recorded yet)
+      const emptyReport = build30DayReport(target, []);
+      renderStatus(target, emptyReport);
+    }
+
+    /** Compute 30 daily buckets, metrics, and incidents from events array */
+    function build30DayReport(target, events) {
+      const now = Date.now();
+      const eventsByDay = new Map();
+      for (const e of events) {
+        const d = (e.timestamp || e.createdAt || '').slice(0, 10);
+        if (!d) continue;
+        if (!eventsByDay.has(d)) eventsByDay.set(d, []);
+        eventsByDay.get(d).push(e);
+      }
+
+      // Incidents resolution mapping
+      const pulseEvents = events.filter(e => e.type === 'pulse' || e.type === 'incident' || (e.title && e.severity));
+      const resolvedIds = new Set(
+        events.filter(e => (e.type === 'pulse_resolve' || e.resolved === true) && (e.incidentId || e.id)).map(e => e.incidentId || e.id)
+      );
+
+      const activeIncidents = pulseEvents.filter(p => !p.resolved && !resolvedIds.has(p.id));
+      const historicalIncidents = pulseEvents.filter(p => p.resolved || resolvedIds.has(p.id)).map(p => {
+        const res = events.find(e => e.type === 'pulse_resolve' && e.incidentId === p.id);
+        return {
+          ...p,
+          resolved: true,
+          resolvedAt: p.resolvedAt || res?.resolvedAt || res?.timestamp || p.timestamp,
+          resolutionMessage: p.resolutionMessage || res?.resolutionMessage || 'Incidente resuelto satisfactoriamente'
+        };
+      });
+
+      const dayBuckets = [];
+      let totalOpsCount = 0;
+      let totalErrorsCount = 0;
+      let allLatencies = [];
+      let dailyUptimesSum = 0;
+
+      // 30 days from D-29 to D-0 (today)
+      for (let i = 29; i >= 0; i--) {
+        const dayDate = new Date(now - i * 86400000);
+        const dayKey = dayDate.toISOString().slice(0, 10);
+        const dayEvents = eventsByDay.get(dayKey) || [];
+
+        const metrics = dayEvents.filter(e => typeof e.value === 'number' || e.type === 'metric');
+        const dayLatencies = metrics.map(e => Number(e.value) || 0).sort((a,b) => a-b);
+        const dayOps = metrics.length;
+        const dayErrors = dayEvents.filter(e => e.level === 'error' || (e.statusCode && e.statusCode >= 500)).length;
+
+        totalOpsCount += dayOps;
+        totalErrorsCount += dayErrors;
+        allLatencies.push(...dayLatencies);
+
+        const dayIncidents = pulseEvents.filter(p => (p.timestamp || '').slice(0, 10) === dayKey);
+        const hasOutage = dayIncidents.some(p => p.severity === 'critical' || p.status === 'outage');
+        const hasDegraded = dayIncidents.some(p => p.severity === 'major' || p.status === 'degraded');
+
+        let dayStatus = 'operational';
+        let dayUptime = 100.0;
+
+        if (hasOutage || (dayOps > 0 && (dayErrors / dayOps) > 0.20)) {
+          dayStatus = 'outage';
+          dayUptime = 90.0;
+        } else if (hasDegraded || (dayOps > 0 && (dayErrors / dayOps) > 0.05) || (dayLatencies.length && dayLatencies[Math.floor(dayLatencies.length*0.95)] > 2500)) {
+          dayStatus = 'degraded';
+          dayUptime = 97.5;
+        } else if (dayOps === 0) {
+          dayStatus = 'idle';
+          dayUptime = 100.0;
+        }
+
+        dailyUptimesSum += dayUptime;
+
+        dayBuckets.push({
+          dateKey: dayKey,
+          dayName: dayDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }),
+          ops: dayOps,
+          avgLatency: dayLatencies.length ? Math.round(dayLatencies.reduce((a,b)=>a+b,0) / dayLatencies.length) : 0,
+          p95Latency: dayLatencies.length ? (dayLatencies[Math.floor(dayLatencies.length * 0.95)] || 0) : 0,
+          errors: dayErrors,
+          status: dayStatus,
+          uptime: dayUptime,
+        });
+      }
+
+      allLatencies.sort((a,b)=>a-b);
+      const avgLatency = allLatencies.length ? Math.round(allLatencies.reduce((a,b)=>a+b,0) / allLatencies.length) : 0;
+      const p95Latency = allLatencies.length ? (allLatencies[Math.floor(allLatencies.length * 0.95)] || 0) : 0;
+      const successRate = totalOpsCount > 0 ? Math.max(0, 100 - (totalErrorsCount / totalOpsCount * 100)).toFixed(1) : '100.0';
+      const calculatedUptime = Number((dailyUptimesSum / 30).toFixed(2));
+
+      let overallStatus = 'operational';
+      if (activeIncidents.some(i => i.severity === 'critical' || i.status === 'outage') || (totalOpsCount > 0 && (totalErrorsCount / totalOpsCount) > 0.20)) {
+        overallStatus = 'outage';
+      } else if (activeIncidents.length > 0 || (totalOpsCount > 0 && (totalErrorsCount / totalOpsCount) > 0.05) || p95Latency > 2500) {
+        overallStatus = 'degraded';
+      }
+
+      return {
+        overallStatus,
+        uptimePercent30d: calculatedUptime,
+        totalOps: totalOpsCount,
+        vitalsSnapshot: {
+          avgLatencyMs: avgLatency,
+          p95LatencyMs: p95Latency,
+          errorRatePercent: totalOpsCount > 0 ? (totalErrorsCount / totalOpsCount * 100).toFixed(1) : 0,
+          successRatePercent: successRate
+        },
+        dayBuckets,
+        activeIncidents,
+        historicalIncidents
+      };
+    }
+
+    /** Render all components on the screen */
+    function renderStatus(target, report) {
+      document.getElementById('statusMainContainer').style.display = 'block';
+      document.getElementById('restrictedContainer').style.display = 'none';
+
+      // 1. Hero Badge & Subtitle
       const badge = document.getElementById('statusBadge');
-      const sub = document.getElementById('statusSubtitle');
-      
-      if (data.overallStatus === 'operational') {
+      const subtitle = document.getElementById('statusSubtitle');
+
+      if (report.overallStatus === 'operational') {
         badge.innerHTML = '<span>✔</span> TODOS LOS SISTEMAS OPERATIVOS';
-        badge.style.background = 'rgba(20,219,96,0.2)';
-        badge.style.color = 'var(--primary)';
-        sub.innerText = 'Rendimiento global óptimo. Sin anomalías activas.';
-      } else if (data.overallStatus === 'degraded') {
+        badge.style.background = 'rgba(20,219,96,0.18)';
+        badge.style.color = 'var(--status-green)';
+        badge.style.border = '1px solid var(--primary-border)';
+        subtitle.innerText = 'Rendimiento global óptimo. Sin anomalías ni degradaciones activas.';
+      } else if (report.overallStatus === 'degraded') {
         badge.innerHTML = '<span>⚠️</span> RENDIMIENTO DEGRADADO';
-        badge.style.background = 'rgba(245,158,11,0.2)';
-        badge.style.color = 'var(--warning)';
-        sub.innerText = 'Se ha detectado latencia elevada o intermitencias parciales.';
+        badge.style.background = 'rgba(245,158,11,0.18)';
+        badge.style.color = 'var(--status-yellow)';
+        badge.style.border = '1px solid rgba(245,158,11,0.4)';
+        subtitle.innerText = 'Se detecta latencia elevada o incremento en la tasa de errores en algunos endpoints.';
       } else {
         badge.innerHTML = '<span>🚨</span> INTERRUPCIÓN DE SERVICIO';
         badge.style.background = 'rgba(239,68,68,0.2)';
-        badge.style.color = 'var(--danger)';
-        sub.innerText = 'Se están experimentando problemas críticos de conectividad.';
+        badge.style.color = 'var(--status-red)';
+        badge.style.border = '1px solid rgba(239,68,68,0.4)';
+        subtitle.innerText = 'Interrupción crítica detectada. Los ingenieros están investigando el incidente.';
       }
 
-      document.getElementById('uptimePercentText').innerText = data.uptimePercent30d + '% Uptime';
-      document.getElementById('snapAvgLatency').innerText = data.vitalsSnapshot.avgLatencyMs + ' ms';
-      document.getElementById('snapP95Latency').innerText = data.vitalsSnapshot.p95LatencyMs + ' ms';
-      const successRate = Math.max(0, 100 - data.vitalsSnapshot.errorRatePercent).toFixed(1);
-      document.getElementById('snapSuccessRate').innerText = successRate + '%';
+      // 2. Metrics Snapshot Cards
+      document.getElementById('uptimePercentText').innerText = `${report.uptimePercent30d}% Uptime`;
+      document.getElementById('snapAvgLatency').innerText = `${report.vitalsSnapshot.avgLatencyMs} ms`;
+      document.getElementById('snapP95Latency').innerText = `${report.vitalsSnapshot.p95LatencyMs} ms`;
+      document.getElementById('snapSuccessRate').innerText = `${report.vitalsSnapshot.successRatePercent || (100 - report.vitalsSnapshot.errorRatePercent).toFixed(1)}%`;
+      document.getElementById('snapTotalOps').innerText = `${(report.totalOps || 0).toLocaleString()} ops`;
 
-      renderUptimeBar(data.uptimePercent30d);
+      // 3. Render 30-Day Day Blocks
+      renderUptimeBar(report.dayBuckets || []);
 
-      // Render Incidents
-      const incList = document.getElementById('incidentsList');
-      const incCount = document.getElementById('incidentsCount');
-      const activeInc = data.activeIncidents || [];
-      incCount.innerText = `${activeInc.length} activos`;
-      if (activeInc.length === 0) {
-        incList.innerHTML = '<div style="color:var(--text-gray); text-align:center; padding:1.5rem;">No se han detectado anomalías ni incidentes en los últimos 30 días.</div>';
-      } else {
-        incList.innerHTML = activeInc.map((inc) => {
-          const sevColor = inc.severity === 'critical' ? 'var(--danger)' : inc.severity === 'major' ? 'var(--warning)' : '#38bdf8';
-          const dt = inc.timestamp ? inc.timestamp.slice(0, 19).replace('T', ' ') : 'Reciente';
-          return `
-            <div class="incident-card" style="border-left: 4px solid ${sevColor};">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong style="color:#fff;">${escapeHtml(inc.title)}</strong>
-                <span class="badge" style="background:${sevColor}; color:#000;">${inc.severity.toUpperCase()}</span>
-              </div>
-              <p style="color:var(--text-muted); font-size:0.86rem; margin-top:0.4rem;">${escapeHtml(inc.message || '')}</p>
-              <div style="font-size:0.75rem; color:var(--text-gray); margin-top:0.4rem;">Reportado: ${dt}</div>
+      // 4. Render Active Incidents
+      renderActiveIncidents(report.activeIncidents || []);
+
+      // 5. Render Subsystems / Lenses Breakdown
+      renderSubsystems(target);
+
+      // 6. Render Historical Incidents
+      renderHistoricalIncidents(report.historicalIncidents || []);
+    }
+
+    /** Render 30 interactive day blocks */
+    function renderUptimeBar(buckets) {
+      const container = document.getElementById('uptimeBar');
+      const tooltip = document.getElementById('uptimeTooltip');
+      container.innerHTML = '';
+
+      buckets.forEach((b, idx) => {
+        const div = document.createElement('div');
+        div.className = `uptime-block ${b.status}`;
+        div.setAttribute('data-index', idx);
+
+        div.addEventListener('mouseenter', (e) => {
+          const rect = div.getBoundingClientRect();
+          const parentRect = container.getBoundingClientRect();
+          const leftOffset = rect.left - parentRect.left + (rect.width / 2);
+
+          const statusLabel = b.status === 'outage'
+            ? '🚨 Interrupción'
+            : b.status === 'degraded'
+            ? '⚠️ Degradado'
+            : b.ops === 0
+            ? '⬜ Sin tráfico (100% Uptime)'
+            : '✔ Operativo (100% Uptime)';
+
+          tooltip.innerHTML = `
+            <div style="font-weight:700; margin-bottom:0.2rem; color:#fff;">${b.dayName} (${b.dateKey})</div>
+            <div style="color:${b.status === 'outage' ? 'var(--status-red)' : b.status === 'degraded' ? 'var(--status-yellow)' : 'var(--status-green)'}; font-weight:600; margin-bottom:0.25rem;">${statusLabel}</div>
+            <div style="color:var(--text-gray); font-size:0.72rem; line-height:1.4;">
+              Peticiones: <strong style="color:#fff;">${b.ops} ops</strong> · Errores: <strong style="color:#fff;">${b.errors}</strong><br>
+              Latencia Media: <strong style="color:#fff;">${b.ops ? b.avgLatency + ' ms' : '—'}</strong> · p95: <strong style="color:#fff;">${b.ops ? b.p95Latency + ' ms' : '—'}</strong>
             </div>
           `;
-        }).join('');
+          tooltip.style.left = `${leftOffset}px`;
+          tooltip.classList.add('visible');
+        });
+
+        div.addEventListener('mouseleave', () => {
+          tooltip.classList.remove('visible');
+        });
+
+        container.appendChild(div);
+      });
+    }
+
+    /** Render Active Incidents Banner */
+    function renderActiveIncidents(activeList) {
+      const banner = document.getElementById('activeIncidentsBanner');
+      const content = document.getElementById('activeIncidentsContent');
+      const countBadge = document.getElementById('activeIncidentsCount');
+
+      if (!activeList || activeList.length === 0) {
+        banner.style.display = 'none';
+        return;
       }
+
+      banner.style.display = 'block';
+      countBadge.innerText = `${activeList.length} activo${activeList.length > 1 ? 's' : ''}`;
+      content.innerHTML = activeList.map(inc => {
+        const sevColor = inc.severity === 'critical' ? 'var(--status-red)' : 'var(--status-yellow)';
+        const dateStr = inc.timestamp ? inc.timestamp.slice(0, 19).replace('T', ' ') : 'Reciente';
+        return `
+          <div style="background:var(--bg-surface); border-left:4px solid ${sevColor}; padding:0.9rem 1.1rem; border-radius:6px; margin-bottom:0.6rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="color:#fff; font-size:0.92rem;">${escapeHtml(inc.title)}</strong>
+              <span class="badge" style="background:${sevColor}; color:#000; font-size:0.7rem;">${(inc.severity || 'MAJOR').toUpperCase()}</span>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.84rem; margin:0.35rem 0 0.2rem;">${escapeHtml(inc.message || inc.description || 'Investigando causas del incidente...')}</p>
+            <div style="font-size:0.74rem; color:var(--text-gray);">Declarado: ${dateStr} UTC</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /** Render Subsystems / Lenses List */
+    function renderSubsystems(target) {
+      const list = document.getElementById('subsystemsList');
+      const lenses = target.mountedLenses || [];
+
+      let itemsHtml = `
+        <div class="subsystem-item">
+          <div>
+            <div style="font-weight:700; color:#fff; font-size:0.88rem;">🌐 API Ingestion & Gateway</div>
+            <div style="font-size:0.75rem; color:var(--text-gray); margin-top:0.15rem;">Recepción de telemetría, latencia y endpoints HTTP</div>
+          </div>
+          <span class="badge badge-success" style="font-size:0.75rem;">Operativo ✔</span>
+        </div>
+        <div class="subsystem-item">
+          <div>
+            <div style="font-weight:700; color:#fff; font-size:0.88rem;">📦 Storage Vault (.libella-storage)</div>
+            <div style="font-size:0.75rem; color:var(--text-gray); margin-top:0.15rem;">Persistencia de eventos, cronógrafos y reglas de breaker</div>
+          </div>
+          <span class="badge badge-success" style="font-size:0.75rem;">Operativo ✔</span>
+        </div>
+      `;
+
+      if (lenses.length > 0) {
+        itemsHtml += lenses.map(l => `
+          <div class="subsystem-item">
+            <div>
+              <div style="font-weight:700; color:#fff; font-size:0.88rem;">🔍 Lente: ${escapeHtml(l.name || l.type)}</div>
+              <div style="font-size:0.75rem; color:var(--text-gray); margin-top:0.15rem;">Adaptador ${escapeHtml(l.type)} montado en Watchtower</div>
+            </div>
+            <span class="badge ${l.enabled !== false ? 'badge-success' : 'badge-warn'}" style="font-size:0.75rem;">
+              ${l.enabled !== false ? 'Operativo ✔' : 'Pausado ⏸'}
+            </span>
+          </div>
+        `).join('');
+      }
+
+      list.innerHTML = itemsHtml;
+    }
+
+    /** Render Historical Incidents Log */
+    function renderHistoricalIncidents(historyList) {
+      const container = document.getElementById('incidentsList');
+      const countBadge = document.getElementById('incidentsCount');
+
+      if (!historyList || historyList.length === 0) {
+        countBadge.innerText = '0 incidentes';
+        container.innerHTML = `
+          <div class="empty-state">
+            ✔ Todos los sistemas han operado con total normalidad y sin incidentes en los últimos 30 días.
+          </div>
+        `;
+        return;
+      }
+
+      countBadge.innerText = `${historyList.length} resuelto${historyList.length > 1 ? 's' : ''}`;
+      container.innerHTML = `<div style="padding:1rem;">` + historyList.map(inc => {
+        const dt = inc.timestamp ? inc.timestamp.slice(0, 19).replace('T', ' ') : 'Reciente';
+        const resDt = inc.resolvedAt ? inc.resolvedAt.slice(0, 19).replace('T', ' ') : dt;
+        return `
+          <div class="incident-card" style="border-left: 4px solid var(--status-green);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="color:#fff; font-size:0.92rem;">${escapeHtml(inc.title)}</strong>
+              <span class="badge badge-success" style="font-size:0.7rem;">RESUELTO ✔</span>
+            </div>
+            <p style="color:var(--text-muted); font-size:0.85rem; margin:0.35rem 0 0.2rem;">${escapeHtml(inc.message || inc.description || '')}</p>
+            <div style="font-size:0.76rem; color:var(--primary); margin-top:0.3rem;">✔ ${escapeHtml(inc.resolutionMessage || 'Incidente resuelto satisfactoriamente')} (a las ${resDt} UTC)</div>
+            <div style="font-size:0.72rem; color:var(--text-gray); margin-top:0.25rem;">Reportado originalmente: ${dt} UTC</div>
+          </div>
+        `;
+      }).join('') + `</div>`;
+    }
+
+    /** Show Restricted Screen */
+    function showRestricted(title, msg) {
+      document.getElementById('statusMainContainer').style.display = 'none';
+      const container = document.getElementById('restrictedContainer');
+      document.getElementById('restrictedTitle').innerText = title;
+      document.getElementById('restrictedMsg').innerText = msg;
+      container.style.display = 'block';
+    }
+
+    function formatTitle(str) {
+      if (!str) return 'PRODUCTION SYSTEM';
+      return str.replace(/[-_]/g, ' ').toUpperCase();
     }
 
     function escapeHtml(str) {
@@ -224,23 +879,16 @@
         .replace(/>/g, '&gt;');
     }
 
-    function renderFallback(libellaId) {
-      document.getElementById('statusTitle').innerText = libellaId.toUpperCase() + ' — STATUS';
-      renderUptimeBar(100);
-    }
+    // Refresh button event
+    document.getElementById('btnRefreshStatus')?.addEventListener('click', () => {
+      const btn = document.getElementById('btnRefreshStatus');
+      btn.innerText = '⌛';
+      loadTelemetryForTarget(currentTarget, true).finally(() => {
+        setTimeout(() => btn.innerText = '🔄', 400);
+      });
+    });
 
-    function renderUptimeBar(uptime) {
-      const container = document.getElementById('uptimeBar');
-      container.innerHTML = '';
-      for (let i = 0; i < 40; i++) {
-        const div = document.createElement('div');
-        div.className = 'uptime-block';
-        if (uptime < 99 && i === 38) div.className += ' degraded';
-        container.appendChild(div);
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', loadStatus);
+    document.addEventListener('DOMContentLoaded', initStatusPage);
   </script>
 </body>
 </html>
