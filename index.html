@@ -503,27 +503,229 @@ await libella.aiCost({ model: 'gpt-4o', inputTokens: 500, outputTokens: 120 });
 
     <!-- TAB 7: GUIDE -->
     <section id="tab-guide" class="tab-pane">
+      <!-- HERO BANNER -->
+      <div class="guide-hero">
+        <h2><span>🛸</span> Libella — El Panóptico Universal</h2>
+        <p>
+          Libella es el motor centralizado de observabilidad, monitorización de series temporales en el Edge y control de costes cloud (FinOps y LLMOps) del ecosistema Terra. Diseñado con una arquitectura de <strong>coste $0 perpetuo</strong>, elimina la necesidad de servidores de telemetría dedicados y bases de datos de pago (Datadog, ClickHouse, Grafana Cloud, PostgreSQL) utilizando tu propio repositorio de GitHub (<code>.libella-storage</code>) como almacenamiento columnar inmutable.
+        </p>
+      </div>
+
+      <!-- SECCIÓN 1: RECORRIDO PESTAÑA A PESTAÑA -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title"><span>📚</span> Guía Maestra & Onboarding de Libella</div>
+          <div class="panel-title"><span>🧭</span> Arquitectura & Recorrido por las Pestañas</div>
         </div>
-        <div style="line-height:1.6; font-size:0.9rem; color:#e2e8f0;">
-          <h3 style="color:var(--primary); margin-bottom:0.5rem;">¿Qué es Libella?</h3>
-          <p style="margin-bottom:1rem;">
-            Libella es el <strong>Panóptico Universal</strong> del ecosistema Terra: un motor centralizado de observabilidad, monitorización de latencias en series temporales y control de costes cloud (FinOps) que funciona sin servidores permanentes y sin bases de datos de pago.
-          </p>
+        <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:1.2rem; line-height:1.5;">
+          Cada pestaña de la consola representa una dimensión sensorial del Panóptico. Aquí tienes el detalle exhaustivo de cómo funciona cada una y qué información te aporta:
+        </p>
 
-          <h3 style="color:var(--primary); margin-bottom:0.5rem;">Los 3 Pasos para Empezar:</h3>
-          <ol style="margin-left:1.5rem; margin-bottom:1.5rem;">
-            <li><strong>Crea un Watchtower:</strong> Asigna un centinela para tu aplicación o entorno (ej. <code>E-Commerce Prod</code>).</li>
-            <li><strong>Conecta tus Lentes:</strong> Configura el envío de eventos desde Vercel Log Drains, llamadas de OpenAI, métricas de AWS o peticiones HTTP estándar.</li>
-            <li><strong>Activa Disyuntores (Circuit Breakers):</strong> Define un techo de gasto en dólares o una tasa de error máxima para recibir alertas automáticas.</li>
-          </ol>
+        <div class="guide-card-grid">
+          <!-- CARD 1: VITALS -->
+          <div class="guide-card">
+            <div class="guide-card-header">
+              <span>📊</span> 1. Vitals (Métricas)
+            </div>
+            <span class="guide-badge">Rendimiento & Salud</span>
+            <p>
+              Muestra la telemetría en tiempo real de tus servicios: <strong>Latencia Media</strong>, <strong>Percentiles p50, p95 y p99</strong>, <strong>Rendimiento en RPS</strong> (peticiones por segundo) y <strong>Tasa de Error</strong>.
+            </p>
+            <p style="font-size:0.8rem; color:#6ee7b7;">
+              💡 <em>Nota sobre RPS:</em> El valor refleja la cadencia media en la ventana temporal activa (1h, 24h, 7d o 30d). Si se registran pocos eventos en una ventana amplia de 24h u 86.400s, el valor numérico se aproxima con precisión a <code>0.00</code>.
+            </p>
+          </div>
 
-          <h3 style="color:var(--primary); margin-bottom:0.5rem;">Almacenamiento $0 Perpetuo:</h3>
-          <p>
-            Los eventos en caliente de las últimas 24h residen en el vault de Git (<code>.libella-storage</code>). El <strong>Cronógrafo</strong> se despierta periódicamente para resumir y compactar millones de registros en resúmenes estadísticos permanentes sin saturar el almacenamiento.
-          </p>
+          <!-- CARD 2: LOGS -->
+          <div class="guide-card">
+            <div class="guide-card-header">
+              <span>📜</span> 2. Logs & Trazas
+            </div>
+            <span class="guide-badge">Diagnóstico Forense</span>
+            <p>
+              Ingesta y visualización estructurada de logs en caliente. Permite <strong>filtrar por nivel de severidad</strong> (<code>DEBUG</code>, <code>INFO</code>, <code>WARN</code>, <code>ERROR</code>, <code>FATAL</code>), <strong>filtrar por fecha exacta</strong> (<code>YYYY-MM-DD</code>) y realizar <strong>búsqueda de texto en vivo</strong> sobre mensajes y etiquetas.
+            </p>
+          </div>
+
+          <!-- CARD 3: FINOPS -->
+          <div class="guide-card">
+            <div class="guide-card-header">
+              <span>💰</span> 3. FinOps & Costes
+            </div>
+            <span class="guide-badge">Control de Gasto Cloud & AI</span>
+            <p>
+              Consolida el gasto multi-proveedor en tiempo real: <strong>AWS</strong>, <strong>Vercel</strong>, <strong>Upstash</strong>, <strong>OpenAI</strong>, <strong>Anthropic</strong>, <strong>DeepSeek</strong> y proveedores personalizados. Calcula automáticamente el gasto diario, la proyección mensual estimada y el desglose de tokens de entrada, salida y caché.
+            </p>
+          </div>
+
+          <!-- CARD 4: BREAKERS -->
+          <div class="guide-card">
+            <div class="guide-card-header">
+              <span>⚡</span> 4. Circuit Breakers
+            </div>
+            <span class="guide-badge">Protección Autónoma</span>
+            <p>
+              Disyuntores inteligentes que vigilan tus límites. Si el gasto diario supera $10, si la tasa de error sube del 5% o si la latencia p95 supera 2s, el breaker se dispara y ejecuta:
+              <strong>Webhooks HTTP</strong> (Slack/Discord/PagerDuty), <strong>Alertas</strong> o <strong>GitHub Repository Dispatch</strong> (rollback automático). Además, el <strong>Hard Cutoff</strong> bloquea peticiones con HTTP 429 para evitar facturas descontroladas.
+            </p>
+          </div>
+
+          <!-- CARD 5: OMMATIDIA -->
+          <div class="guide-card">
+            <div class="guide-card-header">
+              <span>👁️</span> 5. Lentes (Ommatidia)
+            </div>
+            <span class="guide-badge">Motor de Adaptadores</span>
+            <p>
+              Ommatidia es el sistema multifacético de sensores de Libella. Puedes montar múltiples lentes en un solo Watchtower: <code>vercel</code> (Log Drains), <code>cloud</code> (CloudWatch / CUR), <code>ai</code> (Proxy y SDKs LLM), <code>upstash</code>, <code>otlp</code> (OpenTelemetry estándar) o <code>byol</code> (JSON arbitrario con clave de ingesta).
+            </p>
+          </div>
+
+          <!-- CARD 6: CONFIG -->
+          <div class="guide-card">
+            <div class="guide-card-header">
+              <span>🛸</span> 6. Config Watchtower
+            </div>
+            <span class="guide-badge">Ajustes & Claves</span>
+            <p>
+              Gestiona el ciclo de vida de tu centinela: edita el nombre, entorno (<code>production</code>, <code>staging</code>, etc.), presupuestos mensual y diario, slugs personalizados, configuración de la Status Page y <strong>rotación segura de la Ingest Key</strong> (<code>lbk_...</code>) con un solo clic.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 2: INTEGRACIÓN RÁPIDA (SDK, CLI, AI GATEWAY) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>🚀</span> Guía de Integración Rápida ($0 Setup)</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:1.4rem;">
+          <div>
+            <h4 style="color:var(--primary); font-size:0.95rem; margin-bottom:0.5rem;">1. SDK de Node.js / TypeScript</h4>
+            <p style="color:#94a3b8; font-size:0.84rem; margin-bottom:0.6rem;">
+              Instala el paquete unificado oficial y registra métricas o costes con cero dependencias externas:
+            </p>
+            <div class="code-snippet-box">
+              <pre>npm install terra-libella</pre>
+            </div>
+            <div class="code-snippet-box">
+              <pre>import { Libella } from 'terra-libella';
+
+const libella = new Libella();
+
+// Registrar latencia de API
+await libella.metric('api.latency', 145, { route: '/checkout' });
+
+// Registrar consumo de IA (GPT-4o, Claude, etc.)
+await libella.aiCost({
+  model: 'gpt-4o',
+  inputTokens: 1200,
+  outputTokens: 350,
+  provider: 'openai'
+});
+
+// Registrar log estructurado
+await libella.log('info', 'Pago completado', { orderId: 'ord_123' });</pre>
+            </div>
+          </div>
+
+          <div>
+            <h4 style="color:var(--primary); font-size:0.95rem; margin-bottom:0.5rem;">2. CLI Global & AI Gateway Drop-In</h4>
+            <p style="color:#94a3b8; font-size:0.84rem; margin-bottom:0.6rem;">
+              Usa la CLI para consultar la telemetría en tu terminal o levantar el proxy de IA local:
+            </p>
+            <div class="code-snippet-box">
+              <pre># Iniciar consola web local en puerto a elegir
+libella console 3377
+
+# Consultar métricas y FinOps al instante
+libella vitals --range 24h
+libella finops --range 30d
+libella logs --level error --search "timeout"
+
+# AI Gateway universal ($0 Multi-Provider Proxy)
+libella gateway --port 4578
+
+# Inyectar variables de entorno compatibles con OpenAI/Anthropic
+libella env --inject</pre>
+            </div>
+            <div style="background:rgba(20,219,96,0.08); border-left:3px solid var(--primary); padding:0.6rem 0.8rem; border-radius:4px; margin-top:0.6rem;">
+              <span style="font-size:0.8rem; color:#a7f3d0;">
+                🔒 <strong>Drop-in inmediato:</strong> Al definir <code>OPENAI_BASE_URL=http://localhost:4578/v1/openai</code> en tu aplicación, todas tus llamadas de IA se monitorizan y calculan automáticamente sin cambiar una sola línea de tu código.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN 3: PREGUNTAS FRECUENTES (FAQ) -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><span>❓</span> Preguntas Frecuentes (FAQ Exhaustivo)</div>
+        </div>
+        <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:1rem;">
+          Respuestas técnicas y operativas a las dudas más comunes sobre la arquitectura y funcionamiento de Libella:
+        </p>
+
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary class="faq-question">1. ¿Por qué el Rendimiento (RPS) marca 0.00 si tengo eventos registrados?</summary>
+            <div class="faq-answer">
+              El <strong>RPS (Peticiones por Segundo)</strong> se calcula dividiendo el total de eventos analizados entre la cantidad total de segundos de la ventana de tiempo seleccionada:
+              <ul style="margin-left:1.2rem; margin-top:0.4rem;">
+                <li>En una ventana de <strong>24 horas</strong> (86.400 segundos): <code>12 eventos / 86.400 s = 0,000138 req/s</code>.</li>
+                <li>En una ventana de <strong>7 días</strong> (604.800 segundos): <code>12 eventos / 604.800 s = 0,000019 req/s</code>.</li>
+              </ul>
+              Dado que la métrica se formatea con dos decimales (<code>toFixed(2)</code>), cualquier tráfico inferior a 0,005 peticiones/segundo se representará numéricamente como <code>0.00</code>. Al aumentar el volumen de peticiones o consultar una ventana más corta (como <code>1h</code>), el valor aumentará de forma natural.
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">2. ¿Es verdaderamente $0 o hay costes ocultos en servidores o bases de datos?</summary>
+            <div class="faq-answer">
+              Es <strong>100% coste $0</strong>. Libella no alquila servidores en la nube ni bases de datos administradas (como Datadog o ClickHouse). El motor aprovecha la API de GitHub y tu propio repositorio privado <code>.libella-storage</code> como un Vault columnar inmutable y seguro. Solo utilizas los recursos gratuitos incluidos en cualquier cuenta estándar de GitHub.
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">3. ¿Cómo funciona la compactación del Cronógrafo y por qué no satura Git?</summary>
+            <div class="faq-answer">
+              El <strong>Cronógrafo</strong> (<code>ChronographCompactor</code>) ejecuta algoritmos de compresión columnar por fecha:
+              toma los registros en caliente (trazas individuales de latencia, peticiones y costes de las últimas 24h) y los compacta en resúmenes diarios estructurados (rollups diarios). Estos rollups preservan los percentiles matemáticos exactos (p50, p95, p99), el total de peticiones y el desglose de costes en un único registro ligero, permitiendo almacenar años de historia con apenas unos pocos megabytes.
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">4. ¿Cómo mantengo segura mi infraestructura mientras ofrezco una Status Page pública?</summary>
+            <div class="faq-answer">
+              Cada Watchtower cuenta con su propia <strong>Status Page independiente</strong> (accesible en <code>/status.html?watchtower=[slug]</code>).
+              La Status Page expone únicamente datos desinfectados: estado general (Operational, Degraded, Outage), uptime de los últimos 30 días, incidentes públicos declarados y métricas macro (latencia media agregada). <strong>Nunca</strong> revela trazas de logs, variables de entorno, claves de API ni topología interna de tu backend.
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">5. ¿Qué diferencia hay entre la Consola Web Local y la Consola Web Online?</summary>
+            <div class="faq-answer">
+              <ul style="margin-left:1.2rem;">
+                <li><strong>Consola Web Local (<code>libella console</code>)</strong>: Arranca un servidor Node.js en <code>localhost:[puerto]</code> sin dependencias. Puede operar 100% offline contra un mirror local de archivos o conectarse a tu Vault de GitHub.</li>
+                <li style="margin-top:0.4rem;"><strong>Consola Web Online (GitHub Pages / Estática)</strong>: Es una SPA (Single Page Application) estática que se ejecuta íntegramente en tu navegador. Al ingresar tu Personal Access Token (PAT) de GitHub, se autentica de forma segura vía HTTPS directo con la API de GitHub sin pasar por servidores intermediarios de terceros.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">6. ¿Cómo protege un Circuit Breaker con "Hard Cutoff" ante un fallo catastrófico o bucle de IA?</summary>
+            <div class="faq-answer">
+              Cuando activas la casilla <strong>Hard Cutoff</strong> en una regla de Circuit Breaker (por ejemplo, si el gasto diario supera $20 o la tasa de error es > 10%), el AI Gateway de Libella intercepta el tráfico entrante. Al dispararse la regla, en lugar de reenviar las peticiones al proveedor de IA o a tu API, responde de inmediato con <strong>HTTP 429 Too Many Requests</strong> con el encabezado <code>X-Libella-Breaker-Tripped</code>, cortando de raíz el consumo antes de que aumente la factura del proveedor cloud.
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary class="faq-question">7. ¿Dónde se ejecutan las GitHub Actions de Libella?</summary>
+            <div class="faq-answer">
+              Los workflows automáticos de Libella (como el AI Gateway Relay de GitHub Actions o la compactación periódica) se ejecutan <strong>exclusivamente en tu repositorio privado <code>.libella-storage</code></strong>. Libella nunca instala workflows ni modifica los repositorios de tu código fuente a menos que configures expresamente un Circuit Breaker de tipo <code>dispatch</code> apuntando al repositorio de tu aplicación para ejecutar un rollback.
+            </div>
+          </details>
         </div>
       </div>
     </section>
