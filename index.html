@@ -103,14 +103,20 @@
       </div>
 
       <div class="panel">
-        <div class="panel-header">
+        <div class="panel-header" style="flex-wrap:wrap; gap:0.6rem;">
           <div class="panel-title">
             <span>📈</span> Serie Temporal de Latencia (ms) & Rendimiento
           </div>
-          <span class="badge badge-success">Live Edge Sampling</span>
+          <div style="display:flex; align-items:center; gap:0.9rem; font-size:0.78rem;">
+            <span style="display:flex; align-items:center; gap:0.35rem; color:#14db60;"><span style="width:9px; height:9px; border-radius:50%; background:#14db60; display:inline-block; box-shadow:0 0 8px rgba(20,219,96,0.8);"></span> Latencia Media</span>
+            <span style="display:flex; align-items:center; gap:0.35rem; color:#c084fc;"><span style="width:9px; height:9px; border-radius:50%; background:#c084fc; display:inline-block;"></span> p95</span>
+            <span style="display:flex; align-items:center; gap:0.35rem; color:#38bdf8;"><span style="width:9px; height:5px; border-radius:2px; background:#38bdf8; display:inline-block;"></span> Peticiones (Ops)</span>
+            <span class="badge badge-success">Live Edge Sampling</span>
+          </div>
         </div>
-        <div class="chart-container">
-          <canvas id="vitalsChart" class="chart-canvas"></canvas>
+        <div class="chart-container" style="position:relative;">
+          <canvas id="vitalsChart" class="chart-canvas" style="cursor:crosshair;"></canvas>
+          <div id="vitalsChartTooltip" style="position:absolute; display:none; pointer-events:none; background:rgba(3, 10, 6, 0.94); border:1px solid var(--primary-border); padding:0.6rem 0.85rem; border-radius:8px; font-size:0.76rem; color:#fff; z-index:10; box-shadow:0 8px 24px rgba(0,0,0,0.7); backdrop-filter:blur(8px); line-height:1.45;"></div>
           <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-gray); margin-top:0.5rem; padding:0 0.5rem;">
             <span id="chartTimeStart">Hace 24h</span>
             <span id="chartTimeMid">Hace 12h</span>

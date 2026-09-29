@@ -493,8 +493,8 @@ const VaultClient = (() => {
     const errors = events.filter(e => e.level === 'error' || e.level === 'fatal' || e.isError || (e.statusCode && e.statusCode >= 500));
     const rps = (metrics.length / rangeSeconds).toFixed(2);
 
-    // Build 12 time buckets evenly distributed across the selected time range [now - windowMs, now]
-    const bucketCount = 12;
+    // Build time buckets evenly distributed across the selected time range [now - windowMs, now]
+    const bucketCount = range === '30d' ? 30 : range === '7d' ? 28 : 24;
     const step = windowMs / bucketCount;
     const buckets = [];
     for (let i = 0; i < bucketCount; i++) {
@@ -504,9 +504,12 @@ const VaultClient = (() => {
         const t = new Date(e.timestamp || e.createdAt || 0).getTime();
         return t >= bStart && t < bEnd;
       });
-      const bAvg = slice.length ? Math.round(slice.reduce((s, e) => s + (Number(e.value) || 0), 0) / slice.length) : 0;
+      const vals = slice.map(e => Number(e.value) || 0).sort((a, b) => a - b);
+      const bAvg = vals.length ? Math.round(vals.reduce((s, v) => s + v, 0) / vals.length) : 0;
+      const bP95 = vals.length ? (vals[Math.floor(vals.length * 0.95)] || vals[vals.length - 1]) : 0;
       buckets.push({
         avgLatency: bAvg,
+        p95Latency: bP95,
         count: slice.length,
         timestamp: new Date(bEnd).toISOString()
       });
@@ -929,71 +932,287 @@ async function loadVitals() {
   } catch {}
 }
 
+let vitalsChartHoverIdx = null;
+
+function setupVitalsChartInteractions() {
+  const canvas = document.getElementById('vitalsChart');
+  const tooltip = document.getElementById('vitalsChartTooltip');
+  if (!canvas || canvas._hasInteractiveSetup) return;
+  canvas._hasInteractiveSetup = true;
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (!latestVitals || !latestVitals.buckets || latestVitals.buckets.length === 0) {
+      if (tooltip) tooltip.style.display = 'none';
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const paddingLeft = 52;
+    const paddingRight = 18;
+    const chartW = rect.width - paddingLeft - paddingRight;
+    const buckets = latestVitals.buckets;
+    const step = chartW / (buckets.length - 1 || 1);
+
+    const relX = x - paddingLeft;
+    let idx = Math.round(relX / step);
+    if (idx < 0) idx = 0;
+    if (idx >= buckets.length) idx = buckets.length - 1;
+
+    vitalsChartHoverIdx = idx;
+    drawVitalsChart();
+
+    if (tooltip) {
+      const b = buckets[idx];
+      const dateStr = b.timestamp ? b.timestamp.slice(0, 16).replace('T', ' ') : `Punto ${idx + 1}`;
+      const latencyStr = b.count > 0 ? `${b.avgLatency} ms` : '— (Sin tráfico)';
+      const p95Str = (b.count > 0 && b.p95Latency) ? `${b.p95Latency} ms` : '—';
+      const errStr = b.count > 0 ? `${b.errorRate || 0}%` : '0%';
+
+      tooltip.innerHTML = `
+        <div style="font-weight:700; color:#fff; margin-bottom:0.35rem; border-bottom:1px solid rgba(255,255,255,0.12); padding-bottom:0.25rem;">
+          📅 ${dateStr}
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:1.2rem; color:#94a3b8; font-size:0.75rem;">
+          <span>Latencia Media:</span> <strong style="color:#14db60; font-family:var(--font-mono);">${latencyStr}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:1.2rem; color:#94a3b8; font-size:0.75rem;">
+          <span>Percentil p95:</span> <strong style="color:#c084fc; font-family:var(--font-mono);">${p95Str}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:1.2rem; color:#94a3b8; font-size:0.75rem;">
+          <span>Peticiones / Ops:</span> <strong style="color:#38bdf8; font-family:var(--font-mono);">${b.count || 0} ops</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:1.2rem; color:#94a3b8; font-size:0.75rem;">
+          <span>Tasa de Error:</span> <strong style="color:${(b.errorRate || 0) > 0 ? '#ef4444' : '#14db60'}; font-family:var(--font-mono);">${errStr}</strong>
+        </div>
+      `;
+      tooltip.style.display = 'block';
+
+      let tipX = x + 16;
+      let tipY = e.clientY - rect.top - 20;
+      if (tipX + 210 > rect.width) tipX = x - 220;
+      if (tipY < 10) tipY = 10;
+      tooltip.style.left = `${tipX}px`;
+      tooltip.style.top = `${tipY}px`;
+    }
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    vitalsChartHoverIdx = null;
+    if (tooltip) tooltip.style.display = 'none';
+    drawVitalsChart();
+  });
+}
+
 function drawVitalsChart() {
   const canvas = document.getElementById('vitalsChart');
   if (!canvas) return;
+  setupVitalsChartInteractions();
+
   const ctx = canvas.getContext('2d');
-  const dpr  = window.devicePixelRatio || 1;
-  const rect  = canvas.getBoundingClientRect();
-  canvas.width  = rect.width * dpr;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   ctx.scale(dpr, dpr);
   const w = rect.width, h = rect.height;
   ctx.clearRect(0, 0, w, h);
 
-  // Grid
-  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  ctx.lineWidth = 1;
-  for (let y = 0; y < h; y += h / 4) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
-  }
+  const paddingLeft = 52;
+  const paddingRight = 18;
+  const paddingTop = 24;
+  const paddingBottom = 22;
+  const chartW = w - paddingLeft - paddingRight;
+  const chartH = h - paddingTop - paddingBottom;
 
   const hasData = latestVitals && latestVitals.count > 0 && latestVitals.buckets?.length > 0;
 
   if (!hasData) {
-    ctx.beginPath();
-    ctx.moveTo(0, h - 25); ctx.lineTo(w, h - 25);
-    ctx.strokeStyle = 'rgba(20,219,96,0.3)'; ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 3; i++) {
+      const y = paddingTop + (chartH / 3) * i;
+      ctx.beginPath(); ctx.moveTo(paddingLeft, y); ctx.lineTo(w - paddingRight, y); ctx.stroke();
+    }
     ctx.font = '13px Outfit,sans-serif';
-    ctx.fillStyle = 'rgba(156,163,175,0.6)';
+    ctx.fillStyle = 'rgba(156,163,175,0.5)';
     ctx.textAlign = 'center';
-    ctx.fillText('Sin métricas registradas en este intervalo', w / 2, h / 2);
+    ctx.fillText('Sin métricas registradas en este intervalo', paddingLeft + chartW / 2, paddingTop + chartH / 2);
     return;
   }
 
   const buckets = latestVitals.buckets;
-  const maxVal  = Math.max(...buckets.map(b => b.avgLatency || 1), 20);
-  const step    = w / (buckets.length - 1 || 1);
-  const points  = buckets.map((b, i) => ({
-    x: i * step,
-    y: h - ((b.avgLatency || 0) / maxVal) * (h * 0.75) - 20,
-  }));
+  const rawMaxLat = Math.max(...buckets.map(b => Math.max(b.p95Latency || 0, b.avgLatency || 0)), 10);
+  const maxLat = Math.ceil(rawMaxLat * 1.25);
+  const maxCount = Math.max(...buckets.map(b => b.count || 0), 1);
+  const step = chartW / (buckets.length - 1 || 1);
 
-  const bezier = (pts) => {
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) {
-      const cx = (pts[i - 1].x + pts[i].x) / 2;
-      ctx.bezierCurveTo(cx, pts[i - 1].y, cx, pts[i].y, pts[i].x, pts[i].y);
+  // 1. Draw Y-Axis & Horizontal Grid
+  const gridDivisions = 3;
+  ctx.setLineDash([3, 4]);
+  ctx.lineWidth = 1;
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+
+  for (let i = 0; i <= gridDivisions; i++) {
+    const y = paddingTop + (chartH / gridDivisions) * i;
+    const latVal = Math.round(maxLat * (1 - i / gridDivisions));
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.beginPath();
+    ctx.moveTo(paddingLeft, y);
+    ctx.lineTo(w - paddingRight, y);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
+    ctx.fillText(`${latVal}ms`, paddingLeft - 8, y + 3.5);
+  }
+  ctx.setLineDash([]);
+
+  // 2. Draw Throughput / Request Volume Bars
+  const barW = Math.max(Math.min(step * 0.45, 14), 3);
+  for (let i = 0; i < buckets.length; i++) {
+    const b = buckets[i];
+    if (b.count > 0) {
+      const barH = Math.max((b.count / maxCount) * (chartH * 0.42), 4);
+      const barX = paddingLeft + i * step - barW / 2;
+      const barY = paddingTop + chartH - barH;
+
+      const barGrad = ctx.createLinearGradient(0, barY, 0, paddingTop + chartH);
+      barGrad.addColorStop(0, 'rgba(56, 189, 248, 0.5)');
+      barGrad.addColorStop(1, 'rgba(56, 189, 248, 0.04)');
+      ctx.fillStyle = barGrad;
+
+      ctx.beginPath();
+      const r = Math.min(barW / 2, 3);
+      ctx.moveTo(barX, barY + barH);
+      ctx.lineTo(barX, barY + r);
+      ctx.arcTo(barX, barY, barX + r, barY, r);
+      ctx.arcTo(barX + barW, barY, barX + barW, barY + r, r);
+      ctx.lineTo(barX + barW, barY + barH);
+      ctx.closePath();
+      ctx.fill();
     }
-  };
+  }
 
-  // Fill
-  ctx.beginPath(); bezier(points);
-  ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
-  const grad = ctx.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0, 'rgba(20,219,96,0.35)'); grad.addColorStop(1, 'rgba(20,219,96,0)');
-  ctx.fillStyle = grad; ctx.fill();
+  // 3. Prepare Latency Points
+  const activePoints = [];
+  buckets.forEach((b, i) => {
+    const px = paddingLeft + i * step;
+    const py = b.count > 0 ? (paddingTop + chartH - (b.avgLatency / maxLat) * chartH) : null;
+    const p95y = (b.count > 0 && b.p95Latency) ? (paddingTop + chartH - (b.p95Latency / maxLat) * chartH) : null;
+    if (b.count > 0) activePoints.push({ x: px, y: py, p95y, idx: i, bucket: b });
+  });
 
-  // Stroke
-  ctx.beginPath(); bezier(points);
-  ctx.strokeStyle = '#14db60'; ctx.lineWidth = 2.5; ctx.stroke();
+  // 4. Render Latency Trend Curve & Area
+  if (activePoints.length > 0) {
+    ctx.beginPath();
+    for (let i = 0; i < buckets.length; i++) {
+      const b = buckets[i];
+      const px = paddingLeft + i * step;
+      let val = 0;
+      if (b.count > 0) {
+        val = b.avgLatency;
+      }
+      const py = paddingTop + chartH - (val / maxLat) * chartH;
+      if (i === 0) {
+        ctx.moveTo(px, py);
+      } else {
+        const prevPx = paddingLeft + (i - 1) * step;
+        const prevVal = buckets[i - 1].count > 0 ? buckets[i - 1].avgLatency : 0;
+        const prevPy = paddingTop + chartH - (prevVal / maxLat) * chartH;
+        const cx = (prevPx + px) / 2;
+        ctx.bezierCurveTo(cx, prevPy, cx, py, px, py);
+      }
+    }
 
-  // Dots
-  for (const pt of points) {
-    ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff'; ctx.fill();
-    ctx.strokeStyle = '#14db60'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.strokeStyle = '#14db60';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+
+    ctx.lineTo(paddingLeft + chartW, paddingTop + chartH);
+    ctx.lineTo(paddingLeft, paddingTop + chartH);
+    ctx.closePath();
+    const areaGrad = ctx.createLinearGradient(0, paddingTop, 0, paddingTop + chartH);
+    areaGrad.addColorStop(0, 'rgba(20, 219, 96, 0.3)');
+    areaGrad.addColorStop(0.8, 'rgba(20, 219, 96, 0.04)');
+    areaGrad.addColorStop(1, 'rgba(20, 219, 96, 0.0)');
+    ctx.fillStyle = areaGrad;
+    ctx.fill();
+
+    // 5. Draw p95 Secondary Line
+    const hasP95 = activePoints.some(pt => pt.p95y !== null && pt.bucket.p95Latency > pt.bucket.avgLatency);
+    if (hasP95) {
+      ctx.beginPath();
+      ctx.setLineDash([3, 3]);
+      for (let i = 0; i < buckets.length; i++) {
+        const b = buckets[i];
+        const px = paddingLeft + i * step;
+        const val = b.count > 0 ? (b.p95Latency || b.avgLatency) : 0;
+        const py = paddingTop + chartH - (val / maxLat) * chartH;
+        if (i === 0) ctx.moveTo(px, py);
+        else {
+          const prevPx = paddingLeft + (i - 1) * step;
+          const prevVal = buckets[i - 1].count > 0 ? (buckets[i - 1].p95Latency || buckets[i - 1].avgLatency) : 0;
+          const prevPy = paddingTop + chartH - (prevVal / maxLat) * chartH;
+          const cx = (prevPx + px) / 2;
+          ctx.bezierCurveTo(cx, prevPy, cx, py, px, py);
+        }
+      }
+      ctx.strokeStyle = 'rgba(192, 132, 252, 0.75)';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 6. Draw Dots ONLY on Active Points (NO white beads on zero-traffic buckets)
+    for (const pt of activePoints) {
+      // Outer halo
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(20, 219, 96, 0.28)';
+      ctx.fill();
+
+      // Core point
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.strokeStyle = '#14db60';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Peak value label
+      ctx.font = '600 10px JetBrains Mono, monospace';
+      ctx.fillStyle = '#14db60';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${pt.bucket.avgLatency}ms`, pt.x, Math.max(pt.y - 10, paddingTop - 4));
+    }
+  }
+
+  // 7. Interactive Crosshair & Hover Highlight
+  if (vitalsChartHoverIdx !== null && vitalsChartHoverIdx >= 0 && vitalsChartHoverIdx < buckets.length) {
+    const hx = paddingLeft + vitalsChartHoverIdx * step;
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(20, 219, 96, 0.6)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(hx, paddingTop);
+    ctx.lineTo(hx, paddingTop + chartH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const hb = buckets[vitalsChartHoverIdx];
+    if (hb.count > 0) {
+      const hy = paddingTop + chartH - (hb.avgLatency / maxLat) * chartH;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(20, 219, 96, 0.45)';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(hx, hy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
   }
 }
 
