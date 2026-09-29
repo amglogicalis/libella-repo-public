@@ -111,6 +111,11 @@
         </div>
         <div class="chart-container">
           <canvas id="vitalsChart" class="chart-canvas"></canvas>
+          <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--text-gray); margin-top:0.5rem; padding:0 0.5rem;">
+            <span id="chartTimeStart">Hace 24h</span>
+            <span id="chartTimeMid">Hace 12h</span>
+            <span id="chartTimeEnd">Ahora</span>
+          </div>
         </div>
       </div>
 
@@ -133,8 +138,13 @@
           <div class="panel-title"><span>📜</span> Explorador de Trazas Estructuradas</div>
           <span class="badge badge-success" id="logsCountBadge">0 trazas</span>
         </div>
-        <div class="logs-toolbar">
-          <input type="text" id="logSearchInput" class="search-input" placeholder="Buscar por texto, tag, servicio o ID...">
+        <div class="logs-toolbar" style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;">
+          <input type="text" id="logSearchInput" class="search-input" placeholder="Buscar por texto, tag, servicio o ID..." style="flex:1; min-width:180px;">
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <label for="logDateInput" style="font-size:0.78rem; color:var(--text-muted); font-weight:600;">FECHA:</label>
+            <input type="date" id="logDateInput" class="search-input" style="background:var(--bg-surface); border:1px solid var(--primary-border); padding:0.4rem 0.6rem; border-radius:8px; color:#fff; font-size:0.82rem;" title="Filtrar por fecha específica (YYYY-MM-DD)">
+            <button id="btnClearLogDate" class="btn btn-ghost btn-sm" title="Limpiar fecha">✖ Todas</button>
+          </div>
           <select id="logLevelSelect" class="clean-select" style="background:var(--bg-surface); border:1px solid var(--primary-border); padding:0.45rem 0.8rem; border-radius:8px;">
             <option value="">Todos los niveles</option>
             <option value="info">INFO</option>

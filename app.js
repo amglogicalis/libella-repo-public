@@ -377,25 +377,74 @@ const VaultClient = (() => {
   }
 
   // ── Events (read hot events from events/ path in GH repo) ──
-  async function ghReadEvents(libId, range) {
+  const eventsCache = new Map();
+
+  // ── Events (read hot events from events/ path in GH repo) ──
+  async function ghReadEvents(libId, range = '24h', targetDate = null) {
     const now = Date.now();
-    const today = new Date().toISOString().slice(0, 10);
-    let events = (await ghRead(`events/${libId}/${today}.json`)) || [];
-    
-    // For wider ranges, read previous day
-    if (range === '7d' || range === '30d') {
-      const yesterday = new Date(now - 86400000).toISOString().slice(0, 10);
-      const prev = (await ghRead(`events/${libId}/${yesterday}.json`)) || [];
-      events = [...events, ...prev];
-    }
-
-    if (!events.length) {
-      events = (await ghRead(`vault/${libId}/events.json`)) || [];
-    }
-
     const msMap = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
     const windowMs = msMap[range] || msMap['24h'];
-    return events.filter(e => new Date(e.timestamp || e.createdAt || 0).getTime() > now - windowMs);
+    const cutoffMs = now - windowMs;
+
+    // If specific date requested
+    if (targetDate) {
+      const cacheKey = `${libId}:${targetDate}`;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      if (targetDate !== todayStr && eventsCache.has(cacheKey)) {
+        return eventsCache.get(cacheKey);
+      }
+      const data = (await ghRead(`events/${libId}/${targetDate}.json`)) || [];
+      if (targetDate !== todayStr) eventsCache.set(cacheKey, data);
+      return data;
+    }
+
+    // Generate list of days in the window
+    const daysCount = Math.min(Math.ceil(windowMs / 86400000) + 1, 31);
+    const dateKeys = [];
+    for (let i = 0; i < daysCount; i++) {
+      dateKeys.push(new Date(now - i * 86400000).toISOString().slice(0, 10));
+    }
+
+    let datesToFetch = dateKeys;
+    const repo = getRepo();
+    const pat = getPat();
+    if (repo && pat) {
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repo}/contents/events/${libId}`, {
+          headers: { Authorization: `Bearer ${pat}`, Accept: 'application/vnd.github.v3+json' }
+        });
+        if (res.ok) {
+          const files = await res.json();
+          if (Array.isArray(files)) {
+            const availableSet = new Set(files.filter(f => f.name && f.name.endsWith('.json')).map(f => f.name.replace('.json', '')));
+            datesToFetch = dateKeys.filter(d => availableSet.has(d));
+          }
+        }
+      } catch {}
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const promises = datesToFetch.map(async (d) => {
+      const cacheKey = `${libId}:${d}`;
+      if (d !== todayStr && eventsCache.has(cacheKey)) {
+        return eventsCache.get(cacheKey);
+      }
+      const res = (await ghRead(`events/${libId}/${d}.json`)) || [];
+      if (d !== todayStr) eventsCache.set(cacheKey, res);
+      return res;
+    });
+
+    const results = await Promise.all(promises);
+    let all = results.flat();
+
+    if (!all.length) {
+      all = (await ghRead(`vault/${libId}/events.json`)) || [];
+    }
+
+    return all.filter(e => {
+      const t = new Date(e.timestamp || e.createdAt || 0).getTime();
+      return t >= cutoffMs;
+    });
   }
 
   async function ghAppendEvent(libId, event) {
@@ -430,33 +479,39 @@ const VaultClient = (() => {
   }
 
   // ── Compute vitals from raw events (pages mode only) ──
-  function computeVitalsFromEvents(events) {
+  function computeVitalsFromEvents(events, range = '24h') {
+    const msMap = { '1h': 3600000, '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
+    const windowMs = msMap[range] || msMap['24h'];
+    const rangeSeconds = windowMs / 1000;
+    const now = Date.now();
+
     const metrics = events.filter(e => typeof e.value === 'number' || e.type === 'metric');
     if (metrics.length === 0) return { avg: 0, p50: 0, p95: 0, p99: 0, rps: 0, count: 0, errorCount: 0, errorRatePercent: 0, buckets: [] };
     const latencies = metrics.map(e => Number(e.value) || 0).sort((a, b) => a - b);
     const avg = Math.round(latencies.reduce((s, v) => s + v, 0) / latencies.length);
     const p = (pct) => latencies[Math.floor(latencies.length * pct / 100)] || 0;
     const errors = events.filter(e => e.level === 'error' || e.level === 'fatal' || e.isError || (e.statusCode && e.statusCode >= 500));
-    const rps = metrics.length > 0 ? (metrics.length / 3600).toFixed(2) : 0;
-    // Build 12 time buckets
-    const sorted = [...metrics].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const rps = (metrics.length / rangeSeconds).toFixed(2);
+
+    // Build 12 time buckets evenly distributed across the selected time range [now - windowMs, now]
     const bucketCount = 12;
+    const step = windowMs / bucketCount;
     const buckets = [];
-    if (sorted.length >= 1) {
-      const tMin = new Date(sorted[0].timestamp).getTime();
-      const tMax = new Date(sorted[sorted.length - 1].timestamp).getTime() || tMin + 1;
-      const step = Math.max((tMax - tMin) / bucketCount, 1);
-      for (let i = 0; i < bucketCount; i++) {
-        const bStart = tMin + i * step;
-        const bEnd = bStart + step;
-        const slice = sorted.filter(e => {
-          const t = new Date(e.timestamp).getTime();
-          return t >= bStart && t < bEnd;
-        });
-        const bAvg = slice.length ? Math.round(slice.reduce((s, e) => s + (e.value || 0), 0) / slice.length) : 0;
-        buckets.push({ avgLatency: bAvg, count: slice.length });
-      }
+    for (let i = 0; i < bucketCount; i++) {
+      const bStart = now - windowMs + i * step;
+      const bEnd = bStart + step;
+      const slice = metrics.filter(e => {
+        const t = new Date(e.timestamp || e.createdAt || 0).getTime();
+        return t >= bStart && t < bEnd;
+      });
+      const bAvg = slice.length ? Math.round(slice.reduce((s, e) => s + (Number(e.value) || 0), 0) / slice.length) : 0;
+      buckets.push({
+        avgLatency: bAvg,
+        count: slice.length,
+        timestamp: new Date(bEnd).toISOString()
+      });
     }
+
     return {
       avg, p50: p(50), p95: p(95), p99: p(99),
       rps, count: metrics.length,
@@ -498,8 +553,11 @@ const VaultClient = (() => {
     };
   }
 
-  function computeLogsFromEvents(events, { level, search, limit } = {}) {
+  function computeLogsFromEvents(events, { level, search, limit, date } = {}) {
     let logs = events.filter(e => (e.message !== undefined && e.level !== undefined) || e.type === 'log');
+    if (date) {
+      logs = logs.filter(l => String(l.timestamp || l.createdAt || '').startsWith(date));
+    }
     if (level) logs = logs.filter(l => (l.level || 'info').toLowerCase() === level);
     if (search) {
       const s = search.toLowerCase();
@@ -572,12 +630,15 @@ const VaultClient = (() => {
     async getVitals(libId, range) {
       if (await detectMode()) return call('GET', `/api/libellas/${libId}/vitals?range=${range}`);
       const events = await ghReadEvents(libId, range);
-      return computeVitalsFromEvents(events);
+      return computeVitalsFromEvents(events, range);
     },
-    async getLogs(libId, range, level, search, limit) {
-      if (await detectMode()) return call('GET', `/api/libellas/${libId}/logs?range=${range}&level=${level||''}&search=${encodeURIComponent(search||'')}&limit=${limit||100}`);
-      const events = await ghReadEvents(libId, range);
-      return computeLogsFromEvents(events, { level, search, limit });
+    async getLogs(libId, range, level, search, limit, date) {
+      if (await detectMode()) {
+        const qDate = date ? `&date=${encodeURIComponent(date)}` : '';
+        return call('GET', `/api/libellas/${libId}/logs?range=${range}&level=${level||''}&search=${encodeURIComponent(search||'')}&limit=${limit||100}${qDate}`);
+      }
+      const events = await ghReadEvents(libId, range, date);
+      return computeLogsFromEvents(events, { level, search, limit, date });
     },
     async getFinOps(libId, range) {
       if (await detectMode()) return call('GET', `/api/libellas/${libId}/finops?range=${range}`);
@@ -848,6 +909,22 @@ async function loadVitals() {
     document.getElementById('valCount').innerText      = `${data.count}`;
     document.getElementById('valErrorRate').innerText  = `${data.errorRatePercent}%`;
     document.getElementById('valErrorCount').innerText = `${data.errorCount}`;
+
+    // Update timeline indicator labels under chart
+    const labelMap = {
+      '1h': ['Hace 1h', 'Hace 30m', 'Ahora'],
+      '24h': ['Hace 24h', 'Hace 12h', 'Ahora'],
+      '7d': ['Hace 7 días', 'Hace 3.5 días', 'Ahora'],
+      '30d': ['Hace 30 días', 'Hace 15 días', 'Ahora'],
+    };
+    const [tStart, tMid, tEnd] = labelMap[currentTimeRange] || ['Inicio', 'Mitad', 'Ahora'];
+    const elStart = document.getElementById('chartTimeStart');
+    const elMid = document.getElementById('chartTimeMid');
+    const elEnd = document.getElementById('chartTimeEnd');
+    if (elStart) elStart.innerText = tStart;
+    if (elMid) elMid.innerText = tMid;
+    if (elEnd) elEnd.innerText = tEnd;
+
     drawVitalsChart();
   } catch {}
 }
@@ -962,8 +1039,9 @@ let allLogs = [];
 async function loadLogs() {
   const level  = document.getElementById('logLevelSelect')?.value || '';
   const search = document.getElementById('logSearchInput')?.value || '';
+  const date   = document.getElementById('logDateInput')?.value || '';
   try {
-    const data = await VaultClient.getLogs(currentLibellaId, currentTimeRange, level, search);
+    const data = await VaultClient.getLogs(currentLibellaId, currentTimeRange, level, search, 100, date);
     if (!data) return;
     allLogs = data;
     renderLogs(allLogs);
@@ -978,11 +1056,17 @@ function renderLogs(logs) {
     return;
   }
   stream.innerHTML = logs.map(l => {
-    const time = (l.timestamp || '').slice(11, 19) || 'now';
+    const rawTs = l.timestamp || l.createdAt || '';
+    let timeStr = 'reciente';
+    if (rawTs) {
+      const d = rawTs.slice(0, 10);
+      const t = rawTs.slice(11, 19);
+      timeStr = `${d} ${t}`;
+    }
     const lvl  = (l.level || 'info').toLowerCase();
     const tags = l.tags ? ` <span style="color:var(--text-gray);font-size:0.75rem;">${JSON.stringify(l.tags)}</span>` : '';
     return `<div class="log-row">
-      <span class="log-time">${time}</span>
+      <span class="log-time" style="font-family:var(--font-mono); font-size:0.75rem; color:#94a3b8; min-width:140px;">${timeStr}</span>
       <span class="log-level ${lvl}">[${(l.level||'info').toUpperCase()}]</span>
       <span class="log-msg">${escapeHtml(l.message||l.msg||'')}${tags}</span>
     </div>`;
@@ -991,6 +1075,12 @@ function renderLogs(logs) {
 
 document.getElementById('logSearchInput')?.addEventListener('input', () => loadLogs());
 document.getElementById('logLevelSelect')?.addEventListener('change', () => loadLogs());
+document.getElementById('logDateInput')?.addEventListener('change', () => loadLogs());
+document.getElementById('btnClearLogDate')?.addEventListener('click', () => {
+  const inp = document.getElementById('logDateInput');
+  if (inp) inp.value = '';
+  loadLogs();
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 9. FinOps — fixed per-model token display
